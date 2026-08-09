@@ -1,3 +1,64 @@
+# MicroByte to Retro-Go Port 🎮
+
+本项目是将 [Retro-Go](https://github.com/ducalex/retro-go) 固件完美移植到 **MicroByte** 掌机（ESP32-WROVER-E，16MB Flash，8MB PSRAM）的开源工程。
+
+## ⚙️ 硬件适配与 GPIO 引脚梳理
+
+在适配过程中，我们对 MicroByte 的硬件结构进行了全面梳理。以下是针对 Retro-Go 框架的 GPIO 映射清单：
+
+| 模块 | 引脚 | 说明 |
+| --- | --- | --- |
+| **屏幕 (LCD ST7789 240x240)** | | |
+| SPI MOSI | GPIO 13 | |
+| SPI CLK | GPIO 14 | |
+| CS | GPIO NC | 屏幕模块硬接地常通 |
+| DC | GPIO 32 | |
+| RST | GPIO 33 | |
+| 背光 (BCKL) | GPIO 15 | |
+| **存储 (SD Card)** | | |
+| SPI MOSI | GPIO 23 | |
+| SPI MISO | GPIO 19 | |
+| SPI CLK | GPIO 18 | |
+| CS | GPIO 5 | |
+| **音频 (MAX98357A I2S DAC)**| | |
+| I2S BCLK | GPIO 26 | |
+| I2S WS (LRCK) | GPIO 25 | |
+| I2S DATA (DOUT)| GPIO 27 | |
+| **电源与电池** | | |
+| 电池检测 ADC | GPIO 35 | ADC_UNIT_1, ADC_CHANNEL_7 |
+| **手柄按键 (TCA9555)** | | **I2C SDA: GPIO 21, SCL: GPIO 22 (0x20)** |
+| UP | Port 0, Bit 2 | Active Low |
+| DOWN | Port 0, Bit 0 | Active Low |
+| LEFT | Port 0, Bit 1 | Active Low |
+| RIGHT | Port 0, Bit 3 | Active Low |
+| A | Port 0, Bit 9 | (num=9) |
+| B | Port 0, Bit 8 | (num=8) |
+| START | Port 1, Bit 2 | (num=10) |
+| SELECT | Port 1, Bit 3 | (num=11) |
+| MENU | Port 1, Bit 4 | (num=12) |
+| L | Port 1, Bit 2 | (num=6) |
+| R | Port 1, Bit 3 | (num=7) |
+
+---
+
+## 🛠 排错经验总结：幽灵“DOWN”键之谜
+
+在移植过程中，我们经历了一次极其硬核的 Bug 排查，史称“幽灵 DOWN 键之谜”。
+
+**问题现象**：
+游戏运行时，屏幕出现了 3 个沙漏后直接闪退回菜单。当修复了这个问题后，掌机开机竟然直接进入了 Recovery Mode，并且菜单会疯狂地**无限向下滚动**，仿佛有人一直按着“DOWN”键。
+
+**排查过程**：
+1. **隐藏的语法错误**：最初游戏闪退的原因，是因为我们在 `config.h` 中配置 I2C 键盘映射时，错误地使用了 `.bit = 0` 的语法，而 Retro-Go 的框架实际期望的是 `.num = 0`。这个语法错误导致 I2C 手柄驱动在前期根本没有成功加载！所以前期虽然菜单没有往下滚，但其实是因为手柄驱动是瘫痪的。
+2. **唤醒幽灵**：当我们修正了语法（改回 `.num`），手柄驱动成功通网。但刚一通网，驱动就立刻读到了底层硬件传来的信号：`port0=0xFE`。这表示第 0 位（也就是 DOWN 键）处于被拉低（按下）的状态。
+3. **原版固件代码溯源**：为了确认 DOWN 键的定义是否正确，我们深度扒取了 MicroByte 原版固件源码。原版代码中明确写着 `if(!((inputs_value >> 0) & 0x01))`，这证实了 DOWN 键确实连接在 Bit 0 上，且的确是低电平触发。不仅如此，我们还意外发现了原版固件中一个严重的 C 语言指针 Bug —— 它在初始化 TCA9555 芯片时，错误地传入了指针变量的内存地址（`&data`），导致配置信息被写到了乱码寄存器上。由于这个美丽的巧合，原版固件意外保留了芯片的开机默认状态（全输入、Output全高）。
+4. **终极修复**：Retro-Go 的严谨初始化逻辑将 TCA9555 的 Output 寄存器强行置为了 `0x00`。为了彻底排除这个干扰，我们将代码修改为 `0xFF` 以对齐原版固件的默认状态。但在最新的测试中，我们发现开机仍然偶尔会读到 `0xFE`，而在手动按压其他按键后，又瞬间恢复成了 `0xFF`。最终真相大白——**这是一个硬件层面的物理卡滞！**由于掌机按键上的导电胶没有及时回弹（或者螺丝过紧），导致 DOWN 键在物理上真的被一直按住了。经过按压活动后，物理按键复位，日志立刻恢复正常。
+
+**经验总结**：
+在做嵌入式底层移植时，当你怀疑是软件 Bug 时，如果通过修改 I2C 寄存器状态甚至对比原版源码排查到了最底层的二进制电平，结果依然无解，那就必须要相信你的代码：**软件是对的，问题在物理层！**
+
+---
+
 # Table of contents
 - [Description](#description)
 - [Installation](#installation)

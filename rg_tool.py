@@ -19,11 +19,11 @@ PROJECT_NAME = os.getenv("PROJECT_NAME", "Retro-Go")
 PROJECT_ICON = os.getenv("PROJECT_ICON", "assets/icon.raw")
 PROJECT_APPS = {
   # Project name  Type, SubType, Size
-  'launcher':     [0, 16, 1048576],
-  'retro-core':   [0, 16, 1048576],
-  'prboom-go':    [0, 16, 786432],
-  'gwenesis':     [0, 16, 1048576],
-  'fmsx':         [0, 16, 589824],
+  'launcher':     [0, 16, 2097152], # 2MB
+  'retro-core':   [0, 16, 2097152], # 2MB
+  'prboom-go':    [0, 16, 1048576], # 1MB
+  'gwenesis':     [0, 16, 1572864], # 1.5MB
+  'fmsx':         [0, 16, 1048576], # 1MB
 }
 # PROJECT_APPS = {}
 # for t in glob.glob("*/CMakeLists.txt"):

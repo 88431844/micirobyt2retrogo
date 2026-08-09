@@ -116,7 +116,11 @@ static void spi_init(void)
 
     const spi_device_interface_config_t devcfg = {
         .clock_speed_hz = RG_SCREEN_SPEED,   // Typically SPI_MASTER_FREQ_40M or SPI_MASTER_FREQ_80M
+#ifdef RG_SCREEN_SPI_MODE
+        .mode = RG_SCREEN_SPI_MODE,
+#else
         .mode = 0,                           // SPI mode 0
+#endif
         .spics_io_num = RG_GPIO_LCD_CS,      // CS pin
         .queue_size = SPI_TRANSACTION_COUNT, // We want to be able to queue 5 transactions at a time
         .pre_cb = &spi_pre_transfer_cb,      // Specify pre-transfer callback to handle D/C line and SPI lock

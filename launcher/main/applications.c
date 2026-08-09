@@ -169,6 +169,7 @@ static uint32_t crc_read_file(retro_file_t *file, bool interactive)
 
             count = fread(buffer, 1, sizeof(buffer), fp);
             crc_tmp = rg_crc32(crc_tmp, buffer, count);
+            rg_usleep(500); // 0.5ms delay to prevent hardware brownout
         }
 
         done = feof(fp);

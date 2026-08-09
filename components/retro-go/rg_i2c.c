@@ -213,7 +213,7 @@ bool rg_i2c_gpio_init(void)
     {
         if (!rg_i2c_gpio_configure_port(i, 0xFF, RG_GPIO_INPUT))
             goto fail;
-        if (!rg_i2c_gpio_write_port(i, 0x00))
+        if (!rg_i2c_gpio_write_port(i, 0xFF))
             goto fail;
     }
 
