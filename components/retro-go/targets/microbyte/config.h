@@ -1,6 +1,10 @@
 // Target definition
 #define RG_TARGET_NAME             "MICROBYTE"
 
+// Status LED - GPIO2 (RUN indicator on MicroByte PCB)
+// Active HIGH: ESP32 drives GPIO2 high to turn on the LED via R2 to GND
+#define RG_GPIO_LED                GPIO_NUM_2
+
 // Storage - SD Card via SPI
 #define RG_STORAGE_ROOT             "/sd"
 #define RG_STORAGE_SDSPI_HOST       SPI3_HOST    // VSPI

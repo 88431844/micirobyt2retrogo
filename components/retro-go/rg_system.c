@@ -225,7 +225,7 @@ static void update_indicators(bool reset_animation)
 {
     uint32_t visibleIndicators = indicators & app.indicatorsMask;
     static int animation_step = 0;
-    rg_color_t newColor = 0; // C_GREEN
+    rg_color_t newColor = 0;
 
     if (reset_animation)
         animation_step = 0;
@@ -233,9 +233,9 @@ static void update_indicators(bool reset_animation)
         animation_step++;
 
     if (indicators & (3 << RG_INDICATOR_CRITICAL))
-        newColor = C_RED; // Make it flash rapidly!
+        newColor = (animation_step & 1) ? C_RED : C_NONE; // Rapid flash
     else if (visibleIndicators & (1 << RG_INDICATOR_POWER_LOW))
-        newColor = (animation_step & 1) ? C_NONE : C_RED;
+        newColor = (animation_step & 1) ? C_NONE : C_RED; // Slow red blink
     else if (visibleIndicators)
         newColor = C_BLUE;
 
@@ -243,37 +243,74 @@ static void update_indicators(bool reset_animation)
         rg_system_set_led_color(newColor);
 }
 
+#if defined(RG_GPIO_LED)
+// MicroByte GPIO2 activity LED: blinks at a rate proportional to CPU load.
+// Called every 100ms from system_monitor_task.
+// Idle (0% busy)  -> 1 flash every ~2 seconds (1 on per 20 steps)
+// Full (100% busy)-> rapid 5Hz flicker       (1 on per 2 steps)
+static void update_activity_led(void)
+{
+    static int led_step = 0;
+    // Only run when no alert indicators are overriding the LED
+    if (indicators & (3 << RG_INDICATOR_CRITICAL))
+        return;
+    if (indicators & app.indicatorsMask & (1 << RG_INDICATOR_POWER_LOW))
+        return;
+
+    led_step++;
+    float busy = statistics.busyPercent;
+    // Period in 100ms steps: 0%->20 steps (2s), 100%->2 steps (200ms)
+    int period = (int)(20.0f - (busy / 100.0f) * 18.0f);
+    if (period < 2) period = 2;
+    // Turn LED on for exactly 1 step per period (short pulse = heartbeat feel)
+    bool led_on = ((led_step % period) == 0);
+    gpio_set_level(RG_GPIO_LED, led_on ? 1 : 0);
+    ledColor = led_on ? C_GREEN : C_NONE;
+}
+#endif
+
+
 static void system_monitor_task(void *arg)
 {
     int64_t nextLoopTime = 0;
     time_t prevTime = time(NULL);
+    int tick_count = 0;
 
     rg_task_delay(2000);
 
     while (!exitCalled)
     {
-        nextLoopTime = rg_system_timer() + 1000000;
-        rtcValue = time(NULL);
+        nextLoopTime = rg_system_timer() + 100000; // 100ms tick
+        tick_count++;
 
-        update_statistics();
+#if defined(RG_GPIO_LED)
+        update_activity_led();
+#endif
 
-        rg_battery_t battery = rg_input_read_battery();
-        rg_system_set_indicator(RG_INDICATOR_POWER_LOW, (battery.present && battery.level <= 2.f));
-        update_indicators(false);
+        // Run full statistics & housekeeping once per second (every 10 ticks)
+        if (tick_count % 10 == 0)
+        {
+            rtcValue = time(NULL);
 
-        // Try to avoid complex conversions that could allocate, prefer rounding/ceiling if necessary.
-        rg_system_log(RG_LOG_DEBUG, NULL, "STACK:%d, HEAP:%d+%d (%d+%d), BUSY:%d%%, FPS:%d (S:%d R:%d+%d), BATT:%d",
-            statistics.freeStackMain,
-            statistics.freeMemoryInt / 1024,
-            statistics.freeMemoryExt / 1024,
-            statistics.freeBlockInt / 1024,
-            statistics.freeBlockExt / 1024,
-            (int)roundf(statistics.busyPercent),
-            (int)roundf(statistics.totalFPS),
-            (int)roundf(statistics.skippedFPS),
-            (int)roundf(statistics.partialFPS),
-            (int)roundf(statistics.fullFPS),
-            (int)roundf((battery.volts * 1000) ?: battery.level));
+            update_statistics();
+
+            rg_battery_t battery = rg_input_read_battery();
+            rg_system_set_indicator(RG_INDICATOR_POWER_LOW, (battery.present && battery.level <= 2.f));
+            update_indicators(false);
+
+            // Try to avoid complex conversions that could allocate, prefer rounding/ceiling if necessary.
+            rg_system_log(RG_LOG_DEBUG, NULL, "STACK:%d, HEAP:%d+%d (%d+%d), BUSY:%d%%, FPS:%d (S:%d R:%d+%d), BATT:%d",
+                statistics.freeStackMain,
+                statistics.freeMemoryInt / 1024,
+                statistics.freeMemoryExt / 1024,
+                statistics.freeBlockInt / 1024,
+                statistics.freeBlockExt / 1024,
+                (int)roundf(statistics.busyPercent),
+                (int)roundf(statistics.totalFPS),
+                (int)roundf(statistics.skippedFPS),
+                (int)roundf(statistics.partialFPS),
+                (int)roundf(statistics.fullFPS),
+                (int)roundf((battery.volts * 1000) ?: battery.level));
 
         // Auto frameskip
         if (statistics.ticks > app.tickRate * 2)
@@ -313,6 +350,7 @@ static void system_monitor_task(void *arg)
             rg_system_save_time(); // Not sure if this is thread safe...
         }
         prevTime = rtcValue;
+        } // end if (tick_count % 10 == 0)
 
         if (nextLoopTime > rg_system_timer())
         {
