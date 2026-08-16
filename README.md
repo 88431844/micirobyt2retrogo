@@ -255,3 +255,4 @@ If you wish to build or modify Retro-Go, you can find help in the following docu
 Everything in this project is licensed under the [GPLv2 license](COPYING) with the exception of the following components:
 - fmsx/components/fmsx (MSX Emulator, custom non-commercial license)
 - handy-go/components/handy (Lynx emulator, zlib)
+- components/retro-go/fonts/cjk_*_data.inc (generated CJK assets from Noto Sans CJK SC, SIL Open Font License 1.1; see components/retro-go/fonts/NotoSansCJK-OFL.txt)

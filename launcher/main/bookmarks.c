@@ -68,7 +68,20 @@ static void tab_refresh(book_t *book)
             {
                 listbox_item_t *listitem = &tab->listbox.items[items_count++];
                 const char *type = file->app ? file->app->short_name : "n/a";
-                snprintf(listitem->text, sizeof(listitem->text), "[%-3s] %.40s", type, file->name);
+                size_t prefix_length = 0;
+                listitem->text[prefix_length++] = '[';
+                prefix_length += rg_utf8_copy(
+                    listitem->text + prefix_length,
+                    sizeof(listitem->text) - prefix_length - 2,
+                    type);
+                while (prefix_length < 4)
+                    listitem->text[prefix_length++] = ' ';
+                listitem->text[prefix_length++] = ']';
+                listitem->text[prefix_length++] = ' ';
+                listitem->text[prefix_length] = '\0';
+                rg_utf8_copy(listitem->text + prefix_length,
+                             sizeof(listitem->text) - prefix_length,
+                             file->name);
                 listitem->arg = file;
                 listitem->order = i;
             }
@@ -80,12 +93,14 @@ static void tab_refresh(book_t *book)
 
     if (items_count == 0)
     {
+        char message_buffer[256];
         gui_resize_list(tab, 6);
-        sprintf(tab->listbox.items[0].text, _("Welcome to Retro-Go!"));
-        sprintf(tab->listbox.items[1].text, " ");
-        sprintf(tab->listbox.items[2].text, _("You have no %s games"), book->name);
-        sprintf(tab->listbox.items[3].text, " ");
-        sprintf(tab->listbox.items[4].text, _("You can hide this tab in the menu"));
+        rg_utf8_copy(tab->listbox.items[0].text, sizeof(tab->listbox.items[0].text), _("Welcome to Retro-Go!"));
+        rg_utf8_copy(tab->listbox.items[1].text, sizeof(tab->listbox.items[1].text), " ");
+        snprintf(message_buffer, sizeof(message_buffer), _("No entries in %s"), book->tab->desc);
+        rg_utf8_copy(tab->listbox.items[2].text, sizeof(tab->listbox.items[2].text), message_buffer);
+        rg_utf8_copy(tab->listbox.items[3].text, sizeof(tab->listbox.items[3].text), " ");
+        rg_utf8_copy(tab->listbox.items[4].text, sizeof(tab->listbox.items[4].text), _("You can hide this tab in the menu"));
         tab->listbox.cursor = 3;
     }
 }
@@ -277,6 +292,6 @@ bool bookmark_remove(book_type_t book_type, const retro_file_t *file)
 
 void bookmarks_init(void)
 {
-    book_init(BOOK_TYPE_FAVORITE, "favorite", "Favorites", 2000);
-    book_init(BOOK_TYPE_RECENT, "recent", "Recently played", 100);
+    book_init(BOOK_TYPE_FAVORITE, "favorite", _("Favorites"), 2000);
+    book_init(BOOK_TYPE_RECENT, "recent", _("Recently played"), 100);
 }

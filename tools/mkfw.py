@@ -22,6 +22,18 @@ def get_partitions(args, flash_offset = 0):
 
         data = readfile(filename) if filename != "none" else b""
 
+        if size != 0 and len(data) > size:
+            raise SystemExit(
+                "ERROR: File '%s' (%d bytes) exceeds its %d-byte partition by %d byte%s"
+                % (
+                    filename,
+                    len(data),
+                    size,
+                    len(data) - size,
+                    "s" if len(data) - size != 1 else "",
+                )
+            )
+
         flash_alignment = 0x10000 if partype == 0 else 0x1000
         flash_offset = math.ceil(flash_offset / flash_alignment) * flash_alignment
         # Technically the size only has to be aligned to 0x1000, but it's wasted space if two apps follow eachother
@@ -30,10 +42,7 @@ def get_partitions(args, flash_offset = 0):
         print("  [%d]: type=%d, subtype=%d, size=%d (%d%% used), label=%s"
             % (len(partitions), partype, subtype, flash_size, len(data) / flash_size * 100, label))
 
-        if size != 0 and len(data) > size:
-            print("      > WARNING: File larger than partition (+%d bytes), increased size to %d"
-                % (len(data) - size, flash_size))
-        elif size != 0 and size != flash_size:
+        if size != 0 and size != flash_size:
             print("      > WARNING: Incorrect alignment, adjusted size to %d" % (flash_size))
 
         partitions.append((partype, subtype, label, flash_offset, flash_size, data))

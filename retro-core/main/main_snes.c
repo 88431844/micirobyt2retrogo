@@ -124,7 +124,7 @@ static rg_gui_event_t apu_toggle_cb(rg_gui_option_t *option, rg_gui_event_t even
         rg_settings_set_number(NS_APP, SETTING_APU_EMULATION, apu_enabled);
     }
 
-    strcpy(option->value, apu_enabled ? _("On") : _("Off"));
+    rg_utf8_copy(option->value, 32, apu_enabled ? _("On") : _("Off"));
 
     return RG_DIALOG_VOID;
 }
@@ -134,7 +134,7 @@ static rg_gui_event_t lowpass_filter_cb(rg_gui_option_t *option, rg_gui_event_t 
     if (event == RG_DIALOG_PREV || event == RG_DIALOG_NEXT)
         lowpass_filter = !lowpass_filter;
 
-    strcpy(option->value, lowpass_filter ? _("On") : _("Off"));
+    rg_utf8_copy(option->value, 32, lowpass_filter ? _("On") : _("Off"));
 
     return RG_DIALOG_VOID;
 }
@@ -159,7 +159,13 @@ static rg_gui_event_t change_keymap_cb(rg_gui_option_t *option, rg_gui_event_t e
 
     if (option->arg == -1)
     {
-        strcat(strcat(strcpy(option->value, "< "), keymap.name), " >");
+        size_t length = 0;
+        option->value[length++] = '<';
+        option->value[length++] = ' ';
+        length += rg_utf8_copy(option->value + length, 32 - length - 2, _(keymap.name));
+        option->value[length++] = ' ';
+        option->value[length++] = '>';
+        option->value[length] = '\0';
     }
     else if (option->arg >= 0)
     {
@@ -174,11 +180,17 @@ static rg_gui_event_t change_keymap_cb(rg_gui_option_t *option, rg_gui_event_t e
         }
 
         if (keymap.keys[option->arg].mod_mask)
-            sprintf(option->value, "%s + %s", rg_input_get_key_name(mod_button), rg_input_get_key_name(local_button));
+        {
+            char formatted[64];
+            snprintf(formatted, sizeof(formatted), "%s + %s",
+                     _(rg_input_get_key_name(mod_button)),
+                     _(rg_input_get_key_name(local_button)));
+            rg_utf8_copy(option->value, 32, formatted);
+        }
         else
-            sprintf(option->value, "%s", rg_input_get_key_name(local_button));
+            rg_utf8_copy(option->value, 32, _(rg_input_get_key_name(local_button)));
 
-        option->label = SNES_BUTTONS[snes9x_button];
+        option->label = _(SNES_BUTTONS[snes9x_button]);
         option->flags = RG_DIALOG_FLAG_NORMAL;
     }
 
@@ -192,7 +204,7 @@ static rg_gui_event_t menu_keymap_cb(rg_gui_option_t *option, rg_gui_event_t eve
         const rg_gui_option_t options[] = {
             {-1, _("Profile"), "-", RG_DIALOG_FLAG_NORMAL, &change_keymap_cb},
             {-2, "", NULL, RG_DIALOG_FLAG_MESSAGE, NULL},
-            {-3, "snes9x  ", "handheld", RG_DIALOG_FLAG_MESSAGE, NULL},
+            {-3, "snes9x  ", (char *)_("Handheld"), RG_DIALOG_FLAG_MESSAGE, NULL},
             {0, "-", "-", RG_DIALOG_FLAG_HIDDEN, &change_keymap_cb},
             {1, "-", "-", RG_DIALOG_FLAG_HIDDEN, &change_keymap_cb},
             {2, "-", "-", RG_DIALOG_FLAG_HIDDEN, &change_keymap_cb},
@@ -215,7 +227,7 @@ static rg_gui_event_t menu_keymap_cb(rg_gui_option_t *option, rg_gui_event_t eve
         return RG_DIALOG_REDRAW;
     }
 
-    strcpy(option->value, keymap.name);
+    rg_utf8_copy(option->value, 32, _(keymap.name));
     return RG_DIALOG_VOID;
 }
 

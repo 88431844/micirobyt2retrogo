@@ -33,18 +33,18 @@ static bool download_file(const char *url, const char *filename)
     int len;
 
     RG_LOGI("Downloading: '%s' to '%s'", url, filename);
-    rg_gui_draw_message("Connecting...");
+    rg_gui_draw_message(_("Connecting..."));
 
     if (!(req = rg_network_http_open(url, NULL)))
     {
-        rg_gui_alert("Download failed!", "Connection failed!");
+        rg_gui_alert(_("Download failed!"), _("Connection failed!"));
         return false;
     }
 
     if (!(buffer = malloc(16 * 1024)))
     {
         rg_network_http_close(req);
-        rg_gui_alert("Download failed!", "Out of memory!");
+        rg_gui_alert(_("Download failed!"), _("Out of memory!"));
         return false;
     }
 
@@ -52,18 +52,18 @@ static bool download_file(const char *url, const char *filename)
     {
         rg_network_http_close(req);
         free(buffer);
-        rg_gui_alert("Download failed!", "File open failed!");
+        rg_gui_alert(_("Download failed!"), _("File open failed!"));
         return false;
     }
 
-    rg_gui_draw_message("Receiving file...");
+    rg_gui_draw_message(_("Receiving file..."));
     int content_length = req->content_length;
 
     while ((len = rg_network_http_read(req, buffer, 16 * 1024)) > 0)
     {
         received += len;
         written += fwrite(buffer, 1, len, fp);
-        rg_gui_draw_message("Received %d / %d", received, content_length);
+        rg_gui_draw_message(_("Received %d / %d"), received, content_length);
         if (received != written)
             break; // No point in continuing
     }
@@ -75,7 +75,7 @@ static bool download_file(const char *url, const char *filename)
     if (received != written || (received != content_length && content_length != -1))
     {
         rg_storage_delete(filename);
-        rg_gui_alert("Download failed!", "Read/write error!");
+        rg_gui_alert(_("Download failed!"), _("Read/write error!"));
         return false;
     }
 
@@ -193,7 +193,7 @@ void updater_show_dialog(void)
         char *url = cJSON_GetStringValue(cJSON_GetObjectItem(release_json, "html_url"));
 
         release_t *release = releases + i;
-        snprintf(release->name, sizeof(release->name), "%s", name ?: "N/A");
+        rg_utf8_copy(release->name, sizeof(release->name), name ?: "N/A");
         snprintf(release->date, sizeof(release->date), "%s", date ?: "N/A");
         snprintf(release->url, sizeof(release->url), "%s", url ?: "N/A");
         release->assets = calloc(assets_count, sizeof(asset_t));
@@ -207,7 +207,7 @@ void updater_show_dialog(void)
             if (name && url && rg_extension_match(name, "fw img"))
             {
                 asset_t *asset = &release->assets[release->assets_count++];
-                snprintf(asset->name, sizeof(asset->name), "%s", name);
+                rg_utf8_copy(asset->name, sizeof(asset->name), name);
                 snprintf(asset->url, sizeof(asset->url), "%s", url);
             }
         }

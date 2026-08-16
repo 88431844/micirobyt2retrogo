@@ -335,7 +335,7 @@ static void system_monitor_task(void *arg)
             // App hasn't ticked in a while, listen for MENU presses to give feedback to the user
             if (rg_input_wait_for_key(RG_KEY_MENU, true, 1000))
             {
-                const char *message = "App unresponsive... Hold MENU to quit!";
+                const char *message = _("App unresponsive... Hold MENU to quit!");
                 // Drawing at this point isn't safe. But the alternative is being frozen...
                 rg_gui_draw_text(RG_GUI_CENTER, RG_GUI_CENTER, 0, message, C_RED, C_BLACK, RG_TEXT_BIGGER);
                 if (!rg_input_wait_for_key(RG_KEY_MENU, false, 2000))
@@ -521,17 +521,22 @@ rg_app_t *rg_system_init(int sampleRate, const rg_handlers_t *handlers, void *_u
     else if (showCrashDialog)
     {
         RG_LOGE("Recoverying from panic!\n");
-        char message[400] = "Application crashed";
+        char message[400];
+        rg_utf8_copy(message, sizeof(message), _("Application crashed"));
         if (panicTrace.magicWord == RG_STRUCT_MAGIC)
         {
             RG_LOGI("Panic log found, saving to sdcard...\n");
             if (panicTrace.message[0] && strcmp(panicTrace.message, "(none)") != 0)
-                strcpy(message, panicTrace.message);
+                rg_utf8_copy(message, sizeof(message), panicTrace.message);
             if (rg_system_save_trace(RG_STORAGE_ROOT "/crash.log", 1))
-                strcat(message, "\nLog saved to SD Card.");
+            {
+                size_t length = strlen(message);
+                rg_utf8_copy(message + length, sizeof(message) - length,
+                             _("\nLog saved to SD Card."));
+            }
         }
         rg_display_clear(C_BLUE);
-        rg_gui_alert("System Panic!", message);
+        rg_gui_alert(_("System Panic!"), message);
         rg_system_exit();
     }
     memset(&panicTrace, 0, sizeof(panicTrace));
@@ -561,7 +566,8 @@ rg_app_t *rg_system_init(int sampleRate, const rg_handlers_t *handlers, void *_u
 #endif
 
     if (app.lowMemoryMode)
-        rg_gui_alert("External memory not detected", "Boot will continue but it will surely crash...");
+        rg_gui_alert(_("External memory not detected"),
+                     _("Boot will continue but it will surely crash..."));
 
     if (app.bootFlags & RG_BOOT_ONCE)
         update_boot_config(RG_APP_LAUNCHER, NULL, NULL, 0);
@@ -1385,7 +1391,7 @@ bool rg_emu_save_state(uint8_t slot)
         RG_LOGE("Save failed!\n");
         rename(filename, tempname(".bak"));
         remove(tempname(".new"));
-        rg_gui_alert("Save failed", NULL);
+        rg_gui_alert(_("Save failed"), NULL);
     }
     else
     {

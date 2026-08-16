@@ -1,5 +1,8 @@
 // Target definition
 #define RG_TARGET_NAME             "MICROBYTE"
+#define RG_LANG_DEFAULT            RG_LANG_ZH_CN
+#define RG_FONT_DEFAULT            RG_FONT_DEJAVU_12
+#define RG_GUI_DEFAULTS_VERSION    1
 
 // Status LED - GPIO2 (RUN indicator on MicroByte PCB)
 // Active HIGH: ESP32 drives GPIO2 high to turn on the LED via R2 to GND
@@ -96,4 +99,3 @@
     ILI9341_CMD(0x26, 0x01);                    \
     ILI9341_CMD(0xE0, 0xD0, 0x08, 0x11, 0x08, 0x0C, 0x15, 0x39, 0x33, 0x50, 0x36, 0x13, 0x14, 0x29, 0x2D); \
     ILI9341_CMD(0xE1, 0xD0, 0x08, 0x10, 0x08, 0x06, 0x06, 0x39, 0x44, 0x51, 0x0B, 0x16, 0x14, 0x2F, 0x31);
-

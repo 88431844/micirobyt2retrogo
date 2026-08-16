@@ -35,7 +35,7 @@ static rg_gui_event_t overscan_update_cb(rg_gui_option_t *option, rg_gui_event_t
         return RG_DIALOG_REDRAW;
     }
 
-    strcpy(option->value, overscan ? _("On") : _("Off"));
+    rg_utf8_copy(option->value, 32, overscan ? _("On") : _("Off"));
 
     return RG_DIALOG_VOID;
 }

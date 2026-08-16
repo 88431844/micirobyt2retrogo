@@ -87,14 +87,18 @@ static void scan_folder(tab_t *tab, const char *path, const char *selection)
         if (file->type == RETRO_TYPE_FOLDER)
         {
             listbox_item_t *item = &tab->listbox.items[items_count++];
-            snprintf(item->text, sizeof(item->text), "[%.40s]", file->name);
+            size_t length = 0;
+            item->text[length++] = '[';
+            length += rg_utf8_copy(item->text + length, sizeof(item->text) - length - 1, file->name);
+            item->text[length++] = ']';
+            item->text[length] = '\0';
             item->group = 1;
             item->arg = file;
         }
         else if (file->type == RETRO_TYPE_FILE)
         {
             listbox_item_t *item = &tab->listbox.items[items_count++];
-            snprintf(item->text, sizeof(item->text), "%s", file->name);
+            rg_utf8_copy(item->text, sizeof(item->text), file->name);
             item->group = 2;
             item->arg = file;
         }
@@ -198,5 +202,5 @@ static void event_handler(gui_event_t event, tab_t *tab)
 void browser_init(void)
 {
     current_path = rg_unique_string(RG_STORAGE_ROOT);
-    gui_add_tab("browser", "File Manager", NULL, event_handler);
+    gui_add_tab("browser", _("File Manager"), NULL, event_handler);
 }

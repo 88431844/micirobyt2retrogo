@@ -352,14 +352,18 @@ static void tab_refresh(tab_t *tab, const char *selected)
             if (file->type == RETRO_TYPE_FOLDER)
             {
                 listbox_item_t *item = &tab->listbox.items[items_count++];
-                snprintf(item->text, sizeof(item->text), "[%.40s]", file->name);
+                size_t length = 0;
+                item->text[length++] = '[';
+                length += rg_utf8_copy(item->text + length, sizeof(item->text) - length - 1, file->name);
+                item->text[length++] = ']';
+                item->text[length] = '\0';
                 item->group = 1;
                 item->arg = file;
             }
             else if (file->type == RETRO_TYPE_FILE)
             {
                 listbox_item_t *item = &tab->listbox.items[items_count++];
-                snprintf(item->text, sizeof(item->text), "%s", file->name);
+                rg_utf8_copy(item->text, sizeof(item->text), file->name);
                 if ((ext = strrchr(item->text, '.')))
                     *ext = 0;
                 item->group = 2;
@@ -373,13 +377,16 @@ static void tab_refresh(tab_t *tab, const char *selected)
 
     if (items_count == 0)
     {
+        char message_buffer[512];
         gui_resize_list(tab, 6);
-        sprintf(tab->listbox.items[0].text, _("Welcome to Retro-Go!"));
-        sprintf(tab->listbox.items[1].text, " ");
-        sprintf(tab->listbox.items[2].text, _("Place roms in folder: %s"), rg_relpath(app->paths.roms));
-        sprintf(tab->listbox.items[3].text, _("With file extension: %s"), app->extensions);
-        sprintf(tab->listbox.items[4].text, " ");
-        sprintf(tab->listbox.items[5].text, _("You can hide this tab in the menu"));
+        rg_utf8_copy(tab->listbox.items[0].text, sizeof(tab->listbox.items[0].text), _("Welcome to Retro-Go!"));
+        rg_utf8_copy(tab->listbox.items[1].text, sizeof(tab->listbox.items[1].text), " ");
+        snprintf(message_buffer, sizeof(message_buffer), _("Place roms in folder: %s"), rg_relpath(app->paths.roms));
+        rg_utf8_copy(tab->listbox.items[2].text, sizeof(tab->listbox.items[2].text), message_buffer);
+        snprintf(message_buffer, sizeof(message_buffer), _("With file extension: %s"), app->extensions);
+        rg_utf8_copy(tab->listbox.items[3].text, sizeof(tab->listbox.items[3].text), message_buffer);
+        rg_utf8_copy(tab->listbox.items[4].text, sizeof(tab->listbox.items[4].text), " ");
+        rg_utf8_copy(tab->listbox.items[5].text, sizeof(tab->listbox.items[5].text), _("You can hide this tab in the menu"));
         tab->listbox.cursor = 4;
     }
     else if (selected)
@@ -539,8 +546,10 @@ bool application_get_file_crc32(retro_file_t *file)
 static void show_file_info(retro_file_t *file)
 {
     char filesize[16];
-    char filecrc[16] = "Compute";
+    char filecrc[16];
     rg_stat_t info = rg_storage_stat(get_file_path(file));
+
+    rg_utf8_copy(filecrc, sizeof(filecrc), _("Compute"));
 
     if (!info.exists)
     {
@@ -559,12 +568,12 @@ static void show_file_info(retro_file_t *file)
         RG_DIALOG_END,
     };
 
-    sprintf(filesize, "%d KB", (int)info.size / 1024);
+    snprintf(filesize, sizeof(filesize), "%d KB", (int)info.size / 1024);
 
     while (true) // We loop in case we need to update the CRC
     {
         if (file->checksum)
-            sprintf(filecrc, "%08X (%d)", (int)file->checksum, file->app->crc_offset);
+            snprintf(filecrc, sizeof(filecrc), "%08X (%d)", (int)file->checksum, file->app->crc_offset);
 
         switch (rg_gui_dialog(_("File properties"), options, -1))
         {
@@ -672,7 +681,7 @@ static void application(const char *desc, const char *name, const char *exts, co
     retro_app_t *app = calloc(1, sizeof(retro_app_t));
     apps[apps_count++] = app;
 
-    snprintf(app->description, sizeof(app->description), "%s", desc);
+    rg_utf8_copy(app->description, sizeof(app->description), desc);
     snprintf(app->short_name, sizeof(app->short_name), "%s", name);
     snprintf(app->partition, sizeof(app->partition), "%s", part);
     snprintf(app->extensions, sizeof(app->extensions), " %s ", exts);

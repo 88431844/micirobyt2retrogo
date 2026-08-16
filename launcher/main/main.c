@@ -27,7 +27,7 @@ static rg_gui_event_t toggle_tab_cb(rg_gui_option_t *option, rg_gui_event_t even
     {
         tab->enabled = !tab->enabled;
     }
-    strcpy(option->value, tab->enabled ? _("Show") : _("Hide"));
+    rg_utf8_copy(option->value, 32, tab->enabled ? _("Show") : _("Hide"));
     return RG_DIALOG_VOID;
 }
 
@@ -39,7 +39,7 @@ static rg_gui_event_t toggle_tabs_cb(rg_gui_option_t *option, rg_gui_event_t eve
         rg_gui_option_t *opt = options;
 
         for (size_t i = 0; i < gui.tabs_count; ++i)
-            *opt++ = (rg_gui_option_t){i, gui.tabs[i]->name, "...", 1, &toggle_tab_cb};
+            *opt++ = (rg_gui_option_t){i, gui.tabs[i]->desc, "...", 1, &toggle_tab_cb};
         *opt++ = (rg_gui_option_t)RG_DIALOG_END;
 
         rg_gui_dialog(option->label, options, 0);
@@ -62,7 +62,7 @@ static rg_gui_event_t scroll_mode_cb(rg_gui_option_t *option, rg_gui_event_t eve
     if (event == RG_DIALOG_PREV || event == RG_DIALOG_NEXT)
         return RG_DIALOG_REDRAW;
 
-    strcpy(option->value, modes[gui.scroll_mode]);
+    rg_utf8_copy(option->value, 32, modes[gui.scroll_mode]);
     return RG_DIALOG_VOID;
 }
 
@@ -78,7 +78,7 @@ static rg_gui_event_t start_screen_cb(rg_gui_option_t *option, rg_gui_event_t ev
 
     gui.start_screen %= START_SCREEN_COUNT;
 
-    strcpy(option->value, modes[gui.start_screen]);
+    rg_utf8_copy(option->value, 32, modes[gui.start_screen]);
     return RG_DIALOG_VOID;
 }
 
@@ -107,7 +107,7 @@ static rg_gui_event_t show_preview_cb(rg_gui_option_t *option, rg_gui_event_t ev
         return RG_DIALOG_REDRAW;
     }
 
-    strcpy(option->value, modes[gui.show_preview]);
+    rg_utf8_copy(option->value, 32, modes[gui.show_preview]);
     return RG_DIALOG_VOID;
 }
 
@@ -126,7 +126,7 @@ static rg_gui_event_t color_theme_cb(rg_gui_option_t *option, rg_gui_event_t eve
     if (event == RG_DIALOG_PREV || event == RG_DIALOG_NEXT)
         return RG_DIALOG_REDRAW;
 
-    sprintf(option->value, "%d/%d", gui.color_theme + 1, max + 1);
+    snprintf(option->value, 32, "%d/%d", gui.color_theme + 1, max + 1);
     return RG_DIALOG_VOID;
 }
 
@@ -140,7 +140,7 @@ static rg_gui_event_t startup_app_cb(rg_gui_option_t *option, rg_gui_event_t eve
     if (event == RG_DIALOG_NEXT && ++gui.startup_mode > max)
         gui.startup_mode = 0;
 
-    strcpy(option->value, modes[gui.startup_mode % (max + 1)]);
+    rg_utf8_copy(option->value, 32, modes[gui.startup_mode % (max + 1)]);
     return RG_DIALOG_VOID;
 }
 
@@ -171,7 +171,7 @@ static rg_gui_event_t webui_switch_cb(rg_gui_option_t *option, rg_gui_event_t ev
             webui_start();
         rg_settings_set_number(NS_APP, SETTING_WEBUI, enabled);
     }
-    strcpy(option->value, enabled ? _("On") : _("Off"));
+    rg_utf8_copy(option->value, 32, enabled ? _("On") : _("Off"));
     return RG_DIALOG_VOID;
 }
 #endif
@@ -389,9 +389,9 @@ static void try_migrate(void)
     {
     #ifdef RG_TARGET_ODROID_GO
         if (rg_storage_exists(RG_STORAGE_ROOT "/odroid/data"))
-            rg_gui_alert("Save path changed in 1.32",
-                "Save format is no longer fully compatible with Go-Play and can cause corruption.\n\n"
-                "Please copy the contents of:\n /odroid/data\nto\n /retro-go/saves.");
+            rg_gui_alert(_("Save path changed in 1.32"),
+                _("Save format is no longer fully compatible with Go-Play and can cause corruption.\n\n"
+                  "Please copy the contents of:\n /odroid/data\nto\n /retro-go/saves."));
     #endif
         rg_settings_set_number(NS_GLOBAL, "Migration", 1390);
         rg_settings_commit();

@@ -80,7 +80,7 @@ static rg_gui_event_t sprite_limit_cb(rg_gui_option_t *option, rg_gui_event_t ev
         ppu_setopt(PPU_LIMIT_SPRITES, spritelimit);
     }
 
-    strcpy(option->value, spritelimit ? _("On") : _("Off"));
+    rg_utf8_copy(option->value, 32, spritelimit ? _("On") : _("Off"));
 
     return RG_DIALOG_VOID;
 }
@@ -94,7 +94,7 @@ static rg_gui_event_t overscan_update_cb(rg_gui_option_t *option, rg_gui_event_t
         return RG_DIALOG_REDRAW;
     }
 
-    strcpy(option->value, overscan ? _("Auto") : _("Off"));
+    rg_utf8_copy(option->value, 32, overscan ? _("Auto") : _("Off"));
 
     return RG_DIALOG_VOID;
 }
@@ -114,9 +114,9 @@ static rg_gui_event_t autocrop_update_cb(rg_gui_option_t *option, rg_gui_event_t
         return RG_DIALOG_REDRAW;
     }
 
-    if (val == 0) strcpy(option->value, _("Never"));
-    if (val == 1) strcpy(option->value, _("Auto"));
-    if (val == 2) strcpy(option->value, _("Always"));
+    if (val == 0) rg_utf8_copy(option->value, 32, _("Never"));
+    if (val == 1) rg_utf8_copy(option->value, 32, _("Auto"));
+    if (val == 2) rg_utf8_copy(option->value, 32, _("Always"));
 
     return RG_DIALOG_VOID;
 }
@@ -137,12 +137,12 @@ static rg_gui_event_t palette_update_cb(rg_gui_option_t *option, rg_gui_event_t 
         return RG_DIALOG_REDRAW;
     }
 
-    if (pal == NES_PALETTE_NOFRENDO)    strcpy(option->value, _("Nofrendo"));
-    if (pal == NES_PALETTE_COMPOSITE)   strcpy(option->value, _("Composite"));
-    if (pal == NES_PALETTE_NESCLASSIC)  strcpy(option->value, _("NES Classic"));
-    if (pal == NES_PALETTE_NTSC)        strcpy(option->value, _("NTSC"));
-    if (pal == NES_PALETTE_PVM)         strcpy(option->value, _("PVM"));
-    if (pal == NES_PALETTE_SMOOTH)      strcpy(option->value, _("Smooth"));
+    if (pal == NES_PALETTE_NOFRENDO)    rg_utf8_copy(option->value, 32, _("Nofrendo"));
+    if (pal == NES_PALETTE_COMPOSITE)   rg_utf8_copy(option->value, 32, _("Composite"));
+    if (pal == NES_PALETTE_NESCLASSIC)  rg_utf8_copy(option->value, 32, _("NES Classic"));
+    if (pal == NES_PALETTE_NTSC)        rg_utf8_copy(option->value, 32, _("NTSC"));
+    if (pal == NES_PALETTE_PVM)         rg_utf8_copy(option->value, 32, _("PVM"));
+    if (pal == NES_PALETTE_SMOOTH)      rg_utf8_copy(option->value, 32, _("Smooth"));
 
     return RG_DIALOG_VOID;
 }
@@ -175,7 +175,7 @@ static void nsf_draw_overlay(void)
         RG_DIALOG_END,
     };
     snprintf(song, sizeof(song), "%d / %d", nsf_current_song, header->total_songs);
-    rg_gui_draw_dialog("NSF Player", options, 4, -1);
+    rg_gui_draw_dialog(_("NSF Player"), options, 4, -1);
 }
 
 

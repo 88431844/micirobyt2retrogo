@@ -63,8 +63,8 @@ tab_t *gui_add_tab(const char *name, const char *desc, void *arg, void *event_ha
     tab_t *tab = calloc(1, sizeof(tab_t));
 
     snprintf(tab->name, sizeof(tab->name), "%s", name);
-    snprintf(tab->desc, sizeof(tab->desc), "%s", desc);
-    sprintf(tab->status[1].left, "Loading...");
+    rg_utf8_copy(tab->desc, sizeof(tab->desc), desc);
+    rg_utf8_copy(tab->status[1].left, sizeof(tab->status[1].left), _("Loading..."));
 
     tab->event_handler = event_handler;
     tab->initialized = false;
@@ -190,9 +190,9 @@ void gui_set_status(tab_t *tab, const char *left, const char *right)
     if (!tab)
         tab = gui_get_current_tab();
     if (tab && left)
-        strcpy(tab->status[1].left, left);
+        rg_utf8_copy(tab->status[1].left, sizeof(tab->status[1].left), left);
     if (tab && right)
-        strcpy(tab->status[1].right, right);
+        rg_utf8_copy(tab->status[1].right, sizeof(tab->status[1].right), right);
 }
 
 void gui_update_theme(void)
@@ -359,9 +359,9 @@ void gui_scroll_list(tab_t *tab, scroll_whence_t mode, int arg)
     }
 
     if (list_length > 0 && list->items[new_cursor].arg)
-        sprintf(tab->status[0].left, "%d / %d", (new_cursor + 1) % 10000, list_length % 10000);
+        snprintf(tab->status[0].left, sizeof(tab->status[0].left), "%d / %d", (new_cursor + 1) % 10000, list_length % 10000);
     else
-        strcpy(tab->status[0].left, "List empty");
+        rg_utf8_copy(tab->status[0].left, sizeof(tab->status[0].left), _("List empty"));
 
     // if (new_cursor != old_cursor)
     {
@@ -508,7 +508,11 @@ void gui_draw_list(tab_t *tab)
     if (tab->navpath)
     {
         char buffer[64];
-        snprintf(buffer, 63, "[%s]",  tab->navpath);
+        size_t length = 0;
+        buffer[length++] = '[';
+        length += rg_utf8_copy(buffer + length, sizeof(buffer) - length - 1, tab->navpath);
+        buffer[length++] = ']';
+        buffer[length] = '\0';
         top += rg_gui_draw_text(0, top, gui.width, buffer, gui.theme->foreground, C_TRANSPARENT, 0).height;
     }
 
@@ -632,7 +636,7 @@ void gui_load_preview(tab_t *tab)
     if (!tab->preview && file->checksum && (show_missing_cover || errors))
     {
         RG_LOGD("No image found for '%s'\n", file->name);
-        gui_set_status(tab, NULL, errors ? "Bad cover" : "No cover");
+        gui_set_status(tab, NULL, errors ? _("Bad cover") : _("No cover"));
         // gui_draw_status(tab);
         // tab->preview = gui_get_image("cover", file->app);
     }

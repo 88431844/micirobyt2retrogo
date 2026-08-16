@@ -84,7 +84,7 @@ static rg_gui_event_t palette_update_cb(rg_gui_option_t *opt, rg_gui_event_t eve
         return RG_DIALOG_REDRAW;
     }
 
-    sprintf(opt->value, "%d/%d", pal + 1, max + 1);
+    snprintf(opt->value, 32, "%d/%d", pal + 1, max + 1);
     return RG_DIALOG_VOID;
 }
 

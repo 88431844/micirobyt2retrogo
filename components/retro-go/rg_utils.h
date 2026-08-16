@@ -58,6 +58,9 @@ int rg_utf8_decode(const char **ptr);
 // size_t rg_utf8_encode(char **ptr, int codepoint);
 size_t rg_utf8_encode(char *ptr, int codepoint);
 size_t rg_utf8_strlen(const char *str);
+// Copy complete valid codepoints and return the number of bytes copied.
+// src and dst must not overlap. A non-NULL dst is NUL-terminated when dst_size is greater than zero.
+size_t rg_utf8_copy(char *dst, size_t dst_size, const char *src);
 // size_t rg_utf8_get_codepoint(const char *str, int *codepoint);
 // size_t rg_utf8_put_codepoint(char *str, int codepoint);
 

@@ -384,7 +384,7 @@ static rg_gui_event_t crop_select_cb(rg_gui_option_t *option, rg_gui_event_t eve
         rg_settings_set_number(NS_APP, "Crop", CropPicture);
         return RG_DIALOG_REDRAW;
     }
-    strcpy(option->value, CropPicture ? _("On") : _("Off"));
+    rg_utf8_copy(option->value, 32, CropPicture ? _("On") : _("Off"));
     return RG_DIALOG_VOID;
 }
 
@@ -395,7 +395,7 @@ static rg_gui_event_t input_select_cb(rg_gui_option_t *option, rg_gui_event_t ev
         KeyboardEmulation = !KeyboardEmulation;
         rg_settings_set_number(NS_APP, "Input", KeyboardEmulation);
     }
-    strcpy(option->value, KeyboardEmulation ? _("Keyboard") : _("Joystick"));
+    rg_utf8_copy(option->value, 32, KeyboardEmulation ? _("Keyboard") : _("Joystick"));
     return RG_DIALOG_VOID;
 }
 
@@ -446,8 +446,10 @@ void app_main(void)
         if (!rg_storage_exists(pathbuf))
         {
             char message[512];
-            snprintf(message, 512, "File: %s\nYou can find it at:\n%s",
+            char formatted[RG_PATH_MAX + 128];
+            snprintf(formatted, sizeof(formatted), _("File: %s\nYou can find it at:\n%s"),
                         rg_relpath(pathbuf), "https://fms.komkon.org/fMSX/");
+            rg_utf8_copy(message, sizeof(message), formatted);
             rg_gui_alert(_("BIOS file missing!"), message);
         }
     }

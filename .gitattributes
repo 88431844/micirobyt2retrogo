@@ -1,0 +1,3 @@
+/fmsx/main/main.c whitespace=cr-at-eol
+/prboom-go/main/main.c whitespace=cr-at-eol
+/components/retro-go/fonts/NotoSansCJK-OFL.txt -whitespace

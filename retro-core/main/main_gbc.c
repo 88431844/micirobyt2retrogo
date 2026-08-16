@@ -90,7 +90,7 @@ static rg_gui_event_t palette_update_cb(rg_gui_option_t *option, rg_gui_event_t 
 {
     if (gnuboy_get_hwtype() == GB_HW_CGB)
     {
-        strcpy(option->value, "GBC");
+        rg_utf8_copy(option->value, 32, "GBC");
         return RG_DIALOG_VOID;
     }
 
@@ -112,17 +112,17 @@ static rg_gui_event_t palette_update_cb(rg_gui_option_t *option, rg_gui_event_t 
     }
 
     if (pal == GB_PALETTE_DMG)
-        strcpy(option->value, "DMG   ");
+        rg_utf8_copy(option->value, 32, "DMG   ");
     else if (pal == GB_PALETTE_MGB0)
-        strcpy(option->value, "Pocket");
+        rg_utf8_copy(option->value, 32, "Pocket");
     else if (pal == GB_PALETTE_MGB1)
-        strcpy(option->value, "Light ");
+        rg_utf8_copy(option->value, 32, "Light ");
     else if (pal == GB_PALETTE_CGB)
-        strcpy(option->value, "GBC   ");
+        rg_utf8_copy(option->value, 32, "GBC   ");
     else if (pal == GB_PALETTE_SGB)
-        strcpy(option->value, "SGB   ");
+        rg_utf8_copy(option->value, 32, "SGB   ");
     else
-        sprintf(option->value, "%d/%d   ", pal + 1, max - 1);
+        snprintf(option->value, 32, "%d/%d   ", pal + 1, max - 1);
 
     return RG_DIALOG_VOID;
 }
@@ -139,8 +139,8 @@ static rg_gui_event_t sram_autosave_cb(rg_gui_option_t *option, rg_gui_event_t e
         rg_settings_set_number(NS_APP, SETTING_SAVESRAM, autoSaveSRAM);
     }
 
-    if (autoSaveSRAM == 0) strcpy(option->value, _("Off"));
-    else sprintf(option->value, "%3ds", autoSaveSRAM);
+    if (autoSaveSRAM == 0) rg_utf8_copy(option->value, 32, _("Off"));
+    else snprintf(option->value, 32, "%3ds", autoSaveSRAM);
 
     return RG_DIALOG_VOID;
 }
@@ -152,7 +152,7 @@ static rg_gui_event_t enable_bios_cb(rg_gui_option_t *option, rg_gui_event_t eve
         loadBIOSFile = !loadBIOSFile;
         rg_settings_set_number(NS_APP, SETTING_LOADBIOS, loadBIOSFile);
     }
-    strcpy(option->value, loadBIOSFile ? _("Yes") : _("No"));
+    rg_utf8_copy(option->value, 32, loadBIOSFile ? _("Yes") : _("No"));
     return RG_DIALOG_VOID;
 }
 
@@ -165,29 +165,29 @@ static rg_gui_event_t rtc_t_update_cb(rg_gui_option_t *option, rg_gui_event_t ev
     if (option->arg == 'd') {
         if (event == RG_DIALOG_PREV && --d < 0) d = 364;
         if (event == RG_DIALOG_NEXT && ++d > 364) d = 0;
-        sprintf(option->value, "%02d", d);
+        snprintf(option->value, 32, "%02d", d);
     }
     if (option->arg == 'h') {
         if (event == RG_DIALOG_PREV && --h < 0) h = 23;
         if (event == RG_DIALOG_NEXT && ++h > 23) h = 0;
-        sprintf(option->value, "%02d", h);
+        snprintf(option->value, 32, "%02d", h);
     }
     if (option->arg == 'm') {
         if (event == RG_DIALOG_PREV && --m < 0) m = 59;
         if (event == RG_DIALOG_NEXT && ++m > 59) m = 0;
-        sprintf(option->value, "%02d", m);
+        snprintf(option->value, 32, "%02d", m);
     }
     if (option->arg == 's') {
         if (event == RG_DIALOG_PREV && --s < 0) s = 59;
         if (event == RG_DIALOG_NEXT && ++s > 59) s = 0;
-        sprintf(option->value, "%02d", s);
+        snprintf(option->value, 32, "%02d", s);
     }
     if (option->arg == 'x') {
         if (event == RG_DIALOG_PREV || event == RG_DIALOG_NEXT) {
             useSystemTime = !useSystemTime;
             rg_settings_set_number(NS_APP, SETTING_SYSTIME, useSystemTime);
         }
-        strcpy(option->value, useSystemTime ? _("Yes") : _("No"));
+        rg_utf8_copy(option->value, 32, useSystemTime ? _("Yes") : _("No"));
     }
 
     gnuboy_set_time(d, h, m, s);
@@ -212,7 +212,7 @@ static rg_gui_event_t rtc_update_cb(rg_gui_option_t *option, rg_gui_event_t even
     }
     int h, m;
     gnuboy_get_time(NULL, &h, &m, NULL);
-    sprintf(option->value, "%02d:%02d", h, m);
+    snprintf(option->value, 32, "%02d:%02d", h, m);
     return RG_DIALOG_VOID;
 }
 

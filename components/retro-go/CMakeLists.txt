@@ -1,4 +1,9 @@
 set(COMPONENT_SRCDIRS ". drivers/audio fonts libs/netplay libs/lodepng")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${COMPONENT_DIR}/rg_utf8.c"
+    "${COMPONENT_DIR}/rg_gui_defaults.c"
+    "${COMPONENT_DIR}/fonts/cjk_font.c"
+)
 set(COMPONENT_ADD_INCLUDEDIRS ". libs/netplay libs/lodepng")
 if((IDF_VERSION_MAJOR EQUAL 5) AND (IDF_VERSION_MINOR GREATER 2)) # esp-idf 5.3+
     set(COMPONENT_REQUIRES "spi_flash fatfs app_update json nvs_flash esp_adc esp_timer esp_psram esp_wifi esp_http_client esp_driver_ledc driver")
@@ -41,6 +46,10 @@ endif()
 
 if(RG_BUILD_RELEASE)
     component_compile_options(-DRG_BUILD_RELEASE=1)
+endif()
+
+if(RG_PROJECT_APP STREQUAL "launcher")
+    component_compile_options(-DRG_CJK_FULL=1)
 endif()
 
 set(RG_BUILD_INFO "${RG_BUILD_TARGET}-${RG_BUILD_RELEASE} ${PROJECT_VER} SDK:${IDF_VER} ${IDF_TARGET}")

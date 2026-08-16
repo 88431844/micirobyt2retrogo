@@ -11,6 +11,8 @@ import struct
 import time
 import zlib
 
+from tools.release_metadata import copy_font_license
+
 DEFAULT_TARGET = os.getenv("RG_TOOL_TARGET", "odroid-go")
 DEFAULT_BAUD = os.getenv("RG_TOOL_BAUD", "1152000")
 DEFAULT_PORT = os.getenv("RG_TOOL_PORT", "COM3")
@@ -94,6 +96,7 @@ def build_image(apps, output_file, img_type="odroid", fatsize=0, target="unknown
         args += ["1", "129", fatsize, "vfs", "none"]
 
     run(args)
+    copy_font_license(output_file)
 
 
 def clean_app(app):

@@ -121,7 +121,7 @@ static rg_gui_event_t gamma_update_cb(rg_gui_option_t *option, rg_gui_event_t ev
         return RG_DIALOG_REDRAW;
     }
 
-    sprintf(option->value, "%d/%d", gamma, max);
+    snprintf(option->value, 32, "%d/%d", gamma, max);
 
     return RG_DIALOG_VOID;
 }
@@ -482,13 +482,13 @@ static bool screenshot_handler(const char *filename, int width, int height)
 
 static bool save_state_handler(const char *filename)
 {
-    rg_gui_alert("Not implemented", "Please use the in-game menu");
+    rg_gui_alert(_("Not implemented"), _("Please use the in-game menu"));
     return false;
 }
 
 static bool load_state_handler(const char *filename)
 {
-    rg_gui_alert("Not implemented", "Please use the in-game menu");
+    rg_gui_alert(_("Not implemented"), _("Please use the in-game menu"));
     return false;
 }
 
@@ -559,7 +559,7 @@ void app_main()
 
     if (!iwad)
     {
-        iwad = rg_gui_file_picker("Select IWAD file", I_DoomExeDir(), is_iwad, false, false) ?: "";
+        iwad = rg_gui_file_picker(_("Select IWAD file"), I_DoomExeDir(), is_iwad, false, false) ?: "";
         rg_gui_draw_hourglass(); // Redraw hourglass to indicate loading...
     }
 

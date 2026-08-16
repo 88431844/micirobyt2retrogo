@@ -1,18 +1,45 @@
 #!/usr/bin/env python3
-import glob
-import os
 import shutil
+import subprocess
+import sys
+from pathlib import Path
 
-OUTPUT_DIR = "build/release"
-TARGETS = [os.path.basename(t[0:-1]) for t in glob.glob("components/retro-go/targets/*/")]
+OUTPUT_DIR = Path("build/release")
+TARGET_ROOT = Path("components/retro-go/targets")
 
-shutil.rmtree(OUTPUT_DIR, ignore_errors=True)
-os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-for target in TARGETS:
+def target_artifacts(target):
+    return sorted(Path.cwd().glob(f"retro-go_*_{target}.*"))
+
+
+def build_target(target):
+    for artifact in target_artifacts(target):
+        artifact.unlink()
+
     print(f"Building {target}")
-    os.system(f"python rg_tool.py --target={target} release")
-    for f in glob.glob(f"retro-go_*_{target}.*"):
-        os.rename(f, f"{OUTPUT_DIR}/{f}")
+    subprocess.run(
+        [sys.executable, "rg_tool.py", f"--target={target}", "release"],
+        check=True,
+    )
 
-os.system(f"python rg_tool.py clean")
+    artifacts = target_artifacts(target)
+    if not artifacts:
+        raise RuntimeError(f"Release build for {target} produced no artifacts")
+    for artifact in artifacts:
+        shutil.move(str(artifact), OUTPUT_DIR / artifact.name)
+
+
+def main():
+    targets = sorted(path.name for path in TARGET_ROOT.iterdir() if path.is_dir())
+    shutil.rmtree(OUTPUT_DIR, ignore_errors=True)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    for target in targets:
+        build_target(target)
+
+    subprocess.run([sys.executable, "rg_tool.py", "clean"], check=True)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
