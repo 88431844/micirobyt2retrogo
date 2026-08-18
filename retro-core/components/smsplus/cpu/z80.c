@@ -2157,7 +2157,13 @@ void z80_exit(void)
 /****************************************************************************
  * Execute 'cycles' T-states. Return number of T-states really executed
  ****************************************************************************/
+#if defined(RG_TARGET_MICROBYTE)
+/* MicroByte keeps the menu and display paths in IRAM; run the SMS CPU from
+ * flash to leave enough IRAM for the full multilingual launcher image. */
+int z80_execute(int cycles)
+#else
 IRAM_ATTR int z80_execute(int cycles)
+#endif
 {
   z80_ICount = cycles;
   z80_requested_cycles = z80_ICount;
