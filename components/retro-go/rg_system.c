@@ -19,6 +19,7 @@
 #include <esp_timer.h>
 #include <esp_sleep.h>
 #include <driver/gpio.h>
+#include <driver/ledc.h>
 #else
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_mutex.h>
@@ -99,6 +100,9 @@ static rg_color_t ledColor = -1;
 static rg_led_pattern_t ledSystemPattern = RG_LED_PATTERN_ACTIVITY;
 static rg_led_pattern_t ledLowPattern = RG_LED_PATTERN_SLOW;
 static rg_low_battery_sound_t lowBatterySound = RG_LOW_BATTERY_SOUND_ONCE;
+#if defined(RG_GPIO_LED) && defined(RG_GPIO_LED_PWM)
+static bool ledPwmReady = false;
+#endif
 static rg_stats_t statistics;
 static rg_app_t app;
 static rg_task_t tasks[8];
@@ -256,28 +260,45 @@ static void update_indicators(bool reset_animation)
 }
 
 #if defined(RG_GPIO_LED)
-// MicroByte GPIO2 activity LED: blinks at a rate proportional to CPU load.
-// Called every 100ms from system_monitor_task.
-// Idle (0% busy)  -> 1 flash every ~2 seconds (1 on per 20 steps)
-// Full (100% busy)-> rapid 5Hz flicker       (1 on per 2 steps)
+static void set_led_brightness(uint8_t brightness)
+{
+#if defined(RG_GPIO_LED_PWM)
+    if (ledPwmReady)
+    {
+        uint32_t max_duty = (1u << 8) - 1;
+        ledc_set_duty(LEDC_LOW_SPEED_MODE, RG_GPIO_LED_PWM_CHANNEL,
+                      ((uint32_t)brightness * max_duty) / 255u);
+        ledc_update_duty(LEDC_LOW_SPEED_MODE, RG_GPIO_LED_PWM_CHANNEL);
+        ledColor = brightness ? C_GREEN : C_NONE;
+        return;
+    }
+#endif
+    int value = brightness > 0;
+#if defined(RG_GPIO_LED_INVERT)
+    value = !value;
+#endif
+    gpio_set_level(RG_GPIO_LED, value);
+    ledColor = value ? C_GREEN : C_NONE;
+}
+
 static void update_activity_led(void)
 {
-    static int led_step = 0;
-    // Only run when no alert indicators are overriding the LED
-    if (indicators & (3 << RG_INDICATOR_CRITICAL))
-        return;
-    if (indicators & app.indicatorsMask & (1 << RG_INDICATOR_POWER_LOW))
-        return;
+    static int64_t pattern_started;
+    if (!pattern_started)
+        pattern_started = rg_system_timer();
 
-    led_step++;
-    float busy = statistics.busyPercent;
-    // Period in 100ms steps: 0%->20 steps (2s), 100%->2 steps (200ms)
-    int period = (int)(20.0f - (busy / 100.0f) * 18.0f);
-    if (period < 2) period = 2;
-    // Turn LED on for exactly 1 step per period (short pulse = heartbeat feel)
-    bool led_on = ((led_step % period) == 0);
-    gpio_set_level(RG_GPIO_LED, led_on ? 1 : 0);
-    ledColor = led_on ? C_GREEN : C_NONE;
+    uint32_t visible = indicators & app.indicatorsMask;
+    rg_led_pattern_t pattern = RG_LED_PATTERN_OFF;
+    if (visible & (1 << RG_INDICATOR_POWER_LOW))
+        pattern = rg_system_get_led_low_pattern();
+    else if (rg_system_get_led_system_pattern() != RG_LED_PATTERN_OFF)
+        pattern = rg_system_get_led_system_pattern();
+    else if (visible)
+        pattern = RG_LED_PATTERN_SOLID;
+
+    uint8_t brightness = rg_led_pattern_brightness(
+        pattern, rg_system_timer() - pattern_started, statistics.busyPercent);
+    set_led_brightness(brightness);
 }
 #endif
 
@@ -454,6 +475,24 @@ static void platform_init(void)
     #ifdef RG_GPIO_LED
         gpio_set_direction(RG_GPIO_LED, GPIO_MODE_OUTPUT);
         gpio_set_level(RG_GPIO_LED, 0);
+    #ifdef RG_GPIO_LED_PWM
+        if (ledc_timer_config(&(ledc_timer_config_t){
+                .speed_mode = LEDC_LOW_SPEED_MODE,
+                .duty_resolution = RG_GPIO_LED_PWM_RESOLUTION,
+                .timer_num = RG_GPIO_LED_PWM_TIMER,
+                .freq_hz = RG_GPIO_LED_PWM_FREQUENCY,
+                .clk_cfg = LEDC_AUTO_CLK,
+            }) == ESP_OK &&
+            ledc_channel_config(&(ledc_channel_config_t){
+                .gpio_num = RG_GPIO_LED,
+                .speed_mode = LEDC_LOW_SPEED_MODE,
+                .channel = RG_GPIO_LED_PWM_CHANNEL,
+                .timer_sel = RG_GPIO_LED_PWM_TIMER,
+                .duty = 0,
+                .hpoint = 0,
+            }) == ESP_OK)
+            ledPwmReady = true;
+    #endif
     #endif
 #elif defined(RG_TARGET_SDL2)
     freopen("stdout.txt", "w", stdout);
@@ -985,6 +1024,13 @@ static void shutdown_cleanup(void)
     rg_input_wait_for_key(RG_KEY_ALL, 0, -1); // Wait for all keys to be released (boot is sensitive to GPIO0,32,33)
     rg_input_deinit();                        // Now we can shutdown input
     rg_i2c_deinit();                          // Must be after input, sound, and rtc
+#if defined(RG_GPIO_LED) && defined(RG_GPIO_LED_PWM)
+    if (ledPwmReady)
+    {
+        ledc_stop(LEDC_LOW_SPEED_MODE, RG_GPIO_LED_PWM_CHANNEL, 0);
+        ledPwmReady = false;
+    }
+#endif
     rg_display_deinit();                      // Do this very last to reduce flicker time
 }
 
@@ -1195,12 +1241,11 @@ bool rg_system_set_led_color(rg_color_t color)
 {
     ledColor = color;
 #if defined(RG_GPIO_LED)
-    int value = color > 0; // GPIO LED doesn't support colors, so any color = on
-    #if defined(RG_GPIO_LED_INVERT)
-    value = !value;
-    #endif
     if (RG_GPIO_LED != GPIO_NUM_NC)
-        return gpio_set_level(RG_GPIO_LED, value) == ESP_OK;
+    {
+        set_led_brightness(color > 0 ? 255 : 0);
+        return true;
+    }
 #endif
     return true;
 }

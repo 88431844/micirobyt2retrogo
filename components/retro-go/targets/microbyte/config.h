@@ -7,6 +7,11 @@
 // Status LED - GPIO2 (RUN indicator on MicroByte PCB)
 // Active HIGH: ESP32 drives GPIO2 high to turn on the LED via R2 to GND
 #define RG_GPIO_LED                GPIO_NUM_2
+#define RG_GPIO_LED_PWM            1
+#define RG_GPIO_LED_PWM_CHANNEL    LEDC_CHANNEL_1
+#define RG_GPIO_LED_PWM_TIMER      LEDC_TIMER_1
+#define RG_GPIO_LED_PWM_RESOLUTION LEDC_TIMER_8_BIT
+#define RG_GPIO_LED_PWM_FREQUENCY  5000
 
 // Storage - SD Card via SPI
 #define RG_STORAGE_ROOT             "/sd"
@@ -58,7 +63,18 @@
 #define RG_BATTERY_DRIVER           1
 #define RG_BATTERY_ADC_UNIT         ADC_UNIT_1
 #define RG_BATTERY_ADC_CHANNEL      ADC_CHANNEL_0  // GPIO 36
-// Default battery calc (approximate for typical dividers)
+#define RG_BATTERY_CALIBRATION      1
+#define RG_BATTERY_DEFAULT_EMPTY_MV 3500.f
+#define RG_BATTERY_DEFAULT_FULL_MV  4200.f
+#define RG_BATTERY_PRESENT_MIN_MV   2500.f
+#define RG_BATTERY_SAMPLE_COUNT     1
+#define RG_BATTERY_FILTER_SAMPLES   16
+#define RG_BATTERY_LOW_LEVEL        15.f
+#define RG_BATTERY_LOW_EXIT_LEVEL   20.f
+#define RG_BATTERY_CRITICAL_LEVEL   3.f
+#define RG_BATTERY_CRITICAL_EXIT_LEVEL 8.f
+#define RG_BATTERY_CRITICAL_HOLD_SECONDS 5
+// Default battery calc (used as the initial fallback before calibration loads)
 #define RG_BATTERY_CALC_PERCENT(raw) (((raw) * 2.0f - 3500) / (4200 - 3500) * 100.0f)
 #define RG_BATTERY_CALC_VOLTAGE(raw) ((raw) * 2.0f / 1000.0f)
 
