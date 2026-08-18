@@ -89,12 +89,14 @@ static RTC_NOINIT_ATTR time_t rtcValue;
 static bool panicTraceCleared = false;
 static bool exitCalled = false;
 static int overclockLevel, overclockMhz;
-static volatile bool battery_shutdown_requested = false;
 #if RG_BATTERY_CALIBRATION
 static bool battery_low_latched = false;
 static bool battery_critical_latched = false;
-static int64_t battery_critical_since = 0;
 static int64_t low_battery_sound_next = 0;
+static volatile bool battery_low_notice_pending = false;
+static volatile bool battery_critical_prompt_pending = false;
+static volatile bool battery_critical_prompt_open = false;
+static int64_t battery_critical_retry_at = 0;
 #endif
 static uint32_t indicators;
 static rg_color_t ledColor = -1;
@@ -341,22 +343,10 @@ static void system_monitor_task(void *arg)
                     battery_critical_latched, battery.level,
                     RG_BATTERY_CRITICAL_LEVEL, RG_BATTERY_CRITICAL_EXIT_LEVEL);
 
-                if (battery_critical_latched)
-                {
-                    if (battery_critical_since == 0)
-                        battery_critical_since = rg_system_timer();
-                    else if (rg_system_timer() - battery_critical_since >=
-                             (int64_t)RG_BATTERY_CRITICAL_HOLD_SECONDS * 1000000)
-                        battery_shutdown_requested = true;
-                }
-                else
-                {
-                    battery_critical_since = 0;
-                }
-
                 int64_t now = rg_system_timer();
                 if (!was_low && battery_low_latched)
                 {
+                    battery_low_notice_pending = true;
                     if (lowBatterySound != RG_LOW_BATTERY_SOUND_OFF)
                         rg_audio_play_tone(RG_AUDIO_TONE_LOW);
                     low_battery_sound_next = now + 30 * 1000000;
@@ -370,13 +360,33 @@ static void system_monitor_task(void *arg)
                 if (!was_critical && battery_critical_latched &&
                     lowBatterySound != RG_LOW_BATTERY_SOUND_OFF)
                     rg_audio_play_tone(RG_AUDIO_TONE_CRITICAL);
+
+                if (rg_battery_alert_should_prompt(
+                        battery_critical_latched,
+                        battery_critical_prompt_pending,
+                        battery_critical_prompt_open,
+                        now, battery_critical_retry_at))
+                {
+                    battery_critical_prompt_pending = true;
+                    battery_critical_retry_at = now + 60 * 1000000;
+                }
+
+                if (!battery_low_latched)
+                    battery_low_notice_pending = false;
+                if (!battery_critical_latched)
+                {
+                    battery_critical_prompt_pending = false;
+                    battery_critical_retry_at = 0;
+                }
             }
             else
             {
                 battery_low_latched = false;
                 battery_critical_latched = false;
-                battery_critical_since = 0;
                 low_battery_sound_next = 0;
+                battery_low_notice_pending = false;
+                battery_critical_prompt_pending = false;
+                battery_critical_retry_at = 0;
             }
             rg_system_set_indicator(RG_INDICATOR_POWER_LOW, battery_low_latched);
 #else
@@ -576,12 +586,14 @@ rg_app_t *rg_system_init(int sampleRate, const rg_handlers_t *handlers, void *_u
         .logLevel = RG_LOG_DEBUG,
     #endif
     };
-    battery_shutdown_requested = false;
 #if RG_BATTERY_CALIBRATION
     battery_low_latched = false;
     battery_critical_latched = false;
-    battery_critical_since = 0;
     low_battery_sound_next = 0;
+    battery_low_notice_pending = false;
+    battery_critical_prompt_pending = false;
+    battery_critical_prompt_open = false;
+    battery_critical_retry_at = 0;
 #endif
 
     // Do this very early, may be needed to enable serial console
@@ -998,6 +1010,41 @@ int rg_system_get_tick_rate(void)
     return app.tickRate;
 }
 
+static void process_battery_alerts(void)
+{
+#if RG_BATTERY_CALIBRATION
+    if (battery_low_notice_pending)
+    {
+        battery_low_notice_pending = false;
+        rg_gui_draw_message(_("Battery low"));
+        rg_display_force_redraw();
+    }
+
+    if (!battery_critical_prompt_pending)
+        return;
+
+    battery_critical_prompt_pending = false;
+    battery_critical_prompt_open = true;
+    const rg_gui_option_t options[] = {
+        {1, _("Ignore"), NULL, RG_DIALOG_FLAG_NORMAL, NULL},
+        {2, _("Save & shutdown"), NULL, RG_DIALOG_FLAG_NORMAL, NULL},
+        RG_DIALOG_END,
+    };
+    intptr_t result = rg_gui_dialog(_("Battery critically low"), options, 0);
+    battery_critical_prompt_open = false;
+
+    if (result == 2)
+    {
+        if (app.handlers.saveState && app.romPath && app.romPath[0])
+        {
+            rg_gui_draw_message(_("Saving game..."));
+            rg_emu_save_state(app.saveSlot);
+        }
+        rg_system_sleep();
+    }
+#endif
+}
+
 void rg_system_tick(int busyTime)
 {
     statistics.lastTick = rg_system_timer();
@@ -1005,16 +1052,7 @@ void rg_system_tick(int busyTime)
     statistics.ticks++;
     // WDT_RELOAD(WDT_TIMEOUT);
 
-    if (battery_shutdown_requested)
-    {
-        battery_shutdown_requested = false;
-        if (app.handlers.saveState && app.romPath && app.romPath[0])
-        {
-            rg_gui_draw_message(_("Battery critically low, saving..."));
-            rg_emu_save_state(app.saveSlot);
-        }
-        rg_system_sleep();
-    }
+    process_battery_alerts();
 }
 
 IRAM_ATTR int64_t rg_system_timer(void)

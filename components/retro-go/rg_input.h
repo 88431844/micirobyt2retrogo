@@ -1,5 +1,7 @@
 #pragma once
 
+#include "rg_battery.h"
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -97,4 +99,8 @@ uint32_t rg_input_read_gamepad(void);
 rg_battery_t rg_input_read_battery(void);
 bool rg_input_read_gamepad_raw(uint32_t *out);
 bool rg_input_read_battery_raw(rg_battery_t *out);
+void rg_input_reload_battery_calibration(void);
+rg_battery_calibration_t rg_input_get_battery_calibration(void);
+bool rg_input_set_battery_calibration(rg_battery_calibration_t calibration);
+void rg_input_reset_battery_calibration(void);
 const char *rg_input_get_key_name(rg_key_t key);

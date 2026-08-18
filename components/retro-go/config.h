@@ -114,6 +114,50 @@
 #define RG_BATTERY_CALC_VOLTAGE(raw) (0)
 #endif
 
+#ifndef RG_BATTERY_CALIBRATION
+#define RG_BATTERY_CALIBRATION 0
+#endif
+
+#ifndef RG_BATTERY_DEFAULT_EMPTY_MV
+#define RG_BATTERY_DEFAULT_EMPTY_MV 3500.f
+#endif
+
+#ifndef RG_BATTERY_DEFAULT_FULL_MV
+#define RG_BATTERY_DEFAULT_FULL_MV 4200.f
+#endif
+
+#ifndef RG_BATTERY_PRESENT_MIN_MV
+#define RG_BATTERY_PRESENT_MIN_MV 2500.f
+#endif
+
+#ifndef RG_BATTERY_SAMPLE_COUNT
+#define RG_BATTERY_SAMPLE_COUNT 4
+#endif
+
+#ifndef RG_BATTERY_FILTER_SAMPLES
+#define RG_BATTERY_FILTER_SAMPLES 16
+#endif
+
+#ifndef RG_BATTERY_LOW_LEVEL
+#define RG_BATTERY_LOW_LEVEL 2.f
+#endif
+
+#ifndef RG_BATTERY_LOW_EXIT_LEVEL
+#define RG_BATTERY_LOW_EXIT_LEVEL 4.f
+#endif
+
+#ifndef RG_BATTERY_CRITICAL_LEVEL
+#define RG_BATTERY_CRITICAL_LEVEL 0.f
+#endif
+
+#ifndef RG_BATTERY_CRITICAL_EXIT_LEVEL
+#define RG_BATTERY_CRITICAL_EXIT_LEVEL 2.f
+#endif
+
+#ifndef RG_BATTERY_CRITICAL_HOLD_SECONDS
+#define RG_BATTERY_CRITICAL_HOLD_SECONDS 5
+#endif
+
 // These values are to prevent jitter, so that the battery icon doesn't flicker or
 // percent display doesn't oscillate between 77 and 78%, for example
 #ifndef RG_BATTERY_UPDATE_THRESHOLD

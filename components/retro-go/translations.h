@@ -537,6 +537,36 @@ static const char *translations[][RG_LANG_MAX] =
         [RG_LANG_ZH_CN] = "电量低",
     },
     {
+        [RG_LANG_EN] = "Battery low",
+        [RG_LANG_FR] = "Batterie faible",
+        [RG_LANG_DE] = "Batterie niedrig",
+        [RG_LANG_ZH_CN] = "电量不足",
+    },
+    {
+        [RG_LANG_EN] = "Battery critically low",
+        [RG_LANG_FR] = "Batterie presque vide",
+        [RG_LANG_DE] = "Batterie fast leer",
+        [RG_LANG_ZH_CN] = "电量严重不足",
+    },
+    {
+        [RG_LANG_EN] = "Ignore",
+        [RG_LANG_FR] = "Ignorer",
+        [RG_LANG_DE] = "Ignorieren",
+        [RG_LANG_ZH_CN] = "忽略",
+    },
+    {
+        [RG_LANG_EN] = "Save & shutdown",
+        [RG_LANG_FR] = "Sauvegarder et éteindre",
+        [RG_LANG_DE] = "Speichern und ausschalten",
+        [RG_LANG_ZH_CN] = "存档并关机",
+    },
+    {
+        [RG_LANG_EN] = "Saving game...",
+        [RG_LANG_FR] = "Sauvegarde du jeu...",
+        [RG_LANG_DE] = "Spiel wird gespeichert...",
+        [RG_LANG_ZH_CN] = "正在保存游戏...",
+    },
+    {
         [RG_LANG_EN] = "Load pulse",
         [RG_LANG_FR] = "Impulsion selon la charge",
         [RG_LANG_DE] = "Lastimpuls",

@@ -42,6 +42,23 @@ static bool input_task_running = false;
 static uint32_t gamepad_state = -1; // _Atomic
 static uint32_t gamepad_mapped = 0;
 static rg_battery_t battery_state = {0};
+static rg_battery_calibration_t battery_calibration = {
+    RG_BATTERY_DEFAULT_EMPTY_MV,
+    RG_BATTERY_DEFAULT_FULL_MV,
+};
+static bool battery_calibration_loaded = false;
+
+#if RG_BATTERY_CALIBRATION
+static rg_battery_t battery_history[RG_BATTERY_FILTER_SAMPLES];
+static float battery_history_level_sum;
+static float battery_history_voltage_sum;
+static size_t battery_history_count;
+static size_t battery_history_pos;
+static volatile bool battery_history_reset;
+#endif
+
+#define SETTING_BATTERY_EMPTY_MV "BatteryEmptyMv"
+#define SETTING_BATTERY_FULL_MV  "BatteryFullMv"
 
 #define UPDATE_GLOBAL_MAP(keymap)                 \
     for (size_t i = 0; i < RG_COUNT(keymap); ++i) \
@@ -73,14 +90,14 @@ bool rg_input_read_battery_raw(rg_battery_t *out)
     bool charging = false;
 
 #if RG_BATTERY_DRIVER == 1 /* ADC */
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < RG_BATTERY_SAMPLE_COUNT; ++i)
     {
         int value = adc_get_raw(RG_BATTERY_ADC_UNIT, RG_BATTERY_ADC_CHANNEL);
         if (value < 0)
             return false;
         raw_value += esp_adc_cal_raw_to_voltage(value, &adc_chars);
     }
-    raw_value /= 4;
+    raw_value /= RG_BATTERY_SAMPLE_COUNT;
 #elif RG_BATTERY_DRIVER == 2 /* I2C */
     uint8_t data[5];
     if (!rg_i2c_read(0x20, -1, &data, 5))
@@ -94,13 +111,81 @@ bool rg_input_read_battery_raw(rg_battery_t *out)
     if (!out)
         return true;
 
+    float volts = RG_BATTERY_CALC_VOLTAGE(raw_value);
+#if RG_BATTERY_CALIBRATION
+    present = volts * 1000.f >= RG_BATTERY_PRESENT_MIN_MV;
+    if (!battery_calibration_loaded)
+        battery_calibration = (rg_battery_calibration_t){
+            RG_BATTERY_DEFAULT_EMPTY_MV,
+            RG_BATTERY_DEFAULT_FULL_MV,
+        };
+    float level = rg_battery_calculate_level(volts * 1000.f, battery_calibration);
+#else
+    float level = RG_MAX(0.f, RG_MIN(100.f, RG_BATTERY_CALC_PERCENT(raw_value)));
+#endif
+
     *out = (rg_battery_t){
-        .level = RG_MAX(0.f, RG_MIN(100.f, RG_BATTERY_CALC_PERCENT(raw_value))),
-        .volts = RG_BATTERY_CALC_VOLTAGE(raw_value),
+        .level = present ? level : 0.f,
+        .volts = volts,
         .present = present,
         .charging = charging,
     };
     return true;
+}
+
+void rg_input_reload_battery_calibration(void)
+{
+#if RG_BATTERY_CALIBRATION
+    rg_battery_calibration_t calibration = {
+        .empty_mv = (float)rg_settings_get_number(NS_GLOBAL, SETTING_BATTERY_EMPTY_MV,
+                                                   RG_BATTERY_DEFAULT_EMPTY_MV),
+        .full_mv = (float)rg_settings_get_number(NS_GLOBAL, SETTING_BATTERY_FULL_MV,
+                                                  RG_BATTERY_DEFAULT_FULL_MV),
+    };
+    if (!(calibration.empty_mv > 0.f) || !(calibration.full_mv > calibration.empty_mv))
+    {
+        calibration = (rg_battery_calibration_t){
+            RG_BATTERY_DEFAULT_EMPTY_MV,
+            RG_BATTERY_DEFAULT_FULL_MV,
+        };
+    }
+    battery_calibration = calibration;
+    battery_calibration_loaded = true;
+    battery_history_reset = true;
+#else
+    battery_calibration_loaded = true;
+#endif
+}
+
+rg_battery_calibration_t rg_input_get_battery_calibration(void)
+{
+    return battery_calibration;
+}
+
+bool rg_input_set_battery_calibration(rg_battery_calibration_t calibration)
+{
+#if RG_BATTERY_CALIBRATION
+    if (!(calibration.empty_mv > 0.f) || !(calibration.full_mv > calibration.empty_mv))
+        return false;
+
+    battery_calibration = calibration;
+    battery_calibration_loaded = true;
+    rg_settings_set_number(NS_GLOBAL, SETTING_BATTERY_EMPTY_MV, calibration.empty_mv);
+    rg_settings_set_number(NS_GLOBAL, SETTING_BATTERY_FULL_MV, calibration.full_mv);
+    battery_history_reset = true;
+    return true;
+#else
+    (void)calibration;
+    return false;
+#endif
+}
+
+void rg_input_reset_battery_calibration(void)
+{
+    (void)rg_input_set_battery_calibration((rg_battery_calibration_t){
+        RG_BATTERY_DEFAULT_EMPTY_MV,
+        RG_BATTERY_DEFAULT_FULL_MV,
+    });
 }
 
 bool rg_input_read_gamepad_raw(uint32_t *out)
@@ -252,10 +337,40 @@ static void input_task(void *arg)
             rg_battery_t temp = {0};
             if (rg_input_read_battery_raw(&temp))
             {
+#if RG_BATTERY_CALIBRATION
+                if (battery_history_reset || !temp.present)
+                {
+                    memset(battery_history, 0, sizeof(battery_history));
+                    battery_history_level_sum = 0.f;
+                    battery_history_voltage_sum = 0.f;
+                    battery_history_count = 0;
+                    battery_history_pos = 0;
+                    battery_history_reset = false;
+                }
+                if (temp.present)
+                {
+                    if (battery_history_count == RG_BATTERY_FILTER_SAMPLES)
+                    {
+                        battery_history_level_sum -= battery_history[battery_history_pos].level;
+                        battery_history_voltage_sum -= battery_history[battery_history_pos].volts;
+                    }
+                    else
+                    {
+                        battery_history_count++;
+                    }
+                    battery_history[battery_history_pos] = temp;
+                    battery_history_level_sum += temp.level;
+                    battery_history_voltage_sum += temp.volts;
+                    battery_history_pos = (battery_history_pos + 1) % RG_BATTERY_FILTER_SAMPLES;
+                    temp.level = battery_history_level_sum / battery_history_count;
+                    temp.volts = battery_history_voltage_sum / battery_history_count;
+                }
+#else
                 if (fabsf(battery_state.level - temp.level) < RG_BATTERY_UPDATE_THRESHOLD)
                     temp.level = battery_state.level;
                 if (fabsf(battery_state.volts - temp.volts) < RG_BATTERY_UPDATE_THRESHOLD_VOLT)
                     temp.volts = battery_state.volts;
+#endif
             }
             battery_state = temp;
             next_battery_update = rg_system_timer() + 2 * 1000000; // update every 2 seconds
@@ -359,6 +474,8 @@ void rg_input_init(void)
 
     // The first read returns bogus data in some drivers, waste it.
     rg_input_read_gamepad_raw(NULL);
+
+    battery_calibration_loaded = false;
 
     // Start background polling
     rg_task_create("rg_input", &input_task, NULL, 3 * 1024, RG_TASK_PRIORITY_6, 1);
