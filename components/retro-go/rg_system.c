@@ -88,8 +88,17 @@ static RTC_NOINIT_ATTR time_t rtcValue;
 static bool panicTraceCleared = false;
 static bool exitCalled = false;
 static int overclockLevel, overclockMhz;
+static volatile bool battery_shutdown_requested = false;
+#if RG_BATTERY_CALIBRATION
+static bool battery_low_latched = false;
+static bool battery_critical_latched = false;
+static int64_t battery_critical_since = 0;
+#endif
 static uint32_t indicators;
 static rg_color_t ledColor = -1;
+static rg_led_pattern_t ledSystemPattern = RG_LED_PATTERN_ACTIVITY;
+static rg_led_pattern_t ledLowPattern = RG_LED_PATTERN_SLOW;
+static rg_low_battery_sound_t lowBatterySound = RG_LOW_BATTERY_SOUND_ONCE;
 static rg_stats_t statistics;
 static rg_app_t app;
 static rg_task_t tasks[8];
@@ -99,6 +108,9 @@ static const char *SETTING_BOOT_ARGS = "BootArgs";
 static const char *SETTING_BOOT_FLAGS = "BootFlags";
 static const char *SETTING_TIMEZONE = "Timezone";
 static const char *SETTING_INDICATOR_MASK = "Indicators";
+static const char *SETTING_LED_SYSTEM_PATTERN = "LedSystemPattern";
+static const char *SETTING_LED_LOW_PATTERN = "LedLowPattern";
+static const char *SETTING_LOW_BATTERY_SOUND = "LowBatterySound";
 
 #define logbuf_putc(buf, c) (buf)->console[(buf)->cursor++] = c, (buf)->cursor %= RG_LOGBUF_SIZE;
 #define logbuf_puts(buf, str) for (const char *ptr = str; *ptr; ptr++) logbuf_putc(buf, *ptr);
@@ -295,7 +307,39 @@ static void system_monitor_task(void *arg)
             update_statistics();
 
             rg_battery_t battery = rg_input_read_battery();
+#if RG_BATTERY_CALIBRATION
+            if (battery.present)
+            {
+                battery_low_latched = rg_battery_hysteresis(
+                    battery_low_latched, battery.level,
+                    RG_BATTERY_LOW_LEVEL, RG_BATTERY_LOW_EXIT_LEVEL);
+                battery_critical_latched = rg_battery_hysteresis(
+                    battery_critical_latched, battery.level,
+                    RG_BATTERY_CRITICAL_LEVEL, RG_BATTERY_CRITICAL_EXIT_LEVEL);
+
+                if (battery_critical_latched)
+                {
+                    if (battery_critical_since == 0)
+                        battery_critical_since = rg_system_timer();
+                    else if (rg_system_timer() - battery_critical_since >=
+                             (int64_t)RG_BATTERY_CRITICAL_HOLD_SECONDS * 1000000)
+                        battery_shutdown_requested = true;
+                }
+                else
+                {
+                    battery_critical_since = 0;
+                }
+            }
+            else
+            {
+                battery_low_latched = false;
+                battery_critical_latched = false;
+                battery_critical_since = 0;
+            }
+            rg_system_set_indicator(RG_INDICATOR_POWER_LOW, battery_low_latched);
+#else
             rg_system_set_indicator(RG_INDICATOR_POWER_LOW, (battery.present && battery.level <= 2.f));
+#endif
             update_indicators(false);
 
             // Try to avoid complex conversions that could allocate, prefer rounding/ceiling if necessary.
@@ -472,6 +516,12 @@ rg_app_t *rg_system_init(int sampleRate, const rg_handlers_t *handlers, void *_u
         .logLevel = RG_LOG_DEBUG,
     #endif
     };
+    battery_shutdown_requested = false;
+#if RG_BATTERY_CALIBRATION
+    battery_low_latched = false;
+    battery_critical_latched = false;
+    battery_critical_since = 0;
+#endif
 
     // Do this very early, may be needed to enable serial console
     platform_init();
@@ -508,6 +558,19 @@ rg_app_t *rg_system_init(int sampleRate, const rg_handlers_t *handlers, void *_u
     }
 
     rg_settings_init(enterRecoveryMode || showCrashDialog);
+    ledSystemPattern = (rg_led_pattern_t)rg_settings_get_number(
+        NS_GLOBAL, SETTING_LED_SYSTEM_PATTERN, RG_LED_PATTERN_ACTIVITY);
+    if (ledSystemPattern < 0 || ledSystemPattern >= RG_LED_PATTERN_COUNT)
+        ledSystemPattern = RG_LED_PATTERN_ACTIVITY;
+    ledLowPattern = (rg_led_pattern_t)rg_settings_get_number(
+        NS_GLOBAL, SETTING_LED_LOW_PATTERN, RG_LED_PATTERN_SLOW);
+    if (ledLowPattern < 0 || ledLowPattern == RG_LED_PATTERN_ACTIVITY || ledLowPattern >= RG_LED_PATTERN_COUNT)
+        ledLowPattern = RG_LED_PATTERN_SLOW;
+    lowBatterySound = (rg_low_battery_sound_t)rg_settings_get_number(
+        NS_GLOBAL, SETTING_LOW_BATTERY_SOUND, RG_LOW_BATTERY_SOUND_ONCE);
+    if (lowBatterySound < 0 || lowBatterySound >= RG_LOW_BATTERY_SOUND_COUNT)
+        lowBatterySound = RG_LOW_BATTERY_SOUND_ONCE;
+    rg_input_reload_battery_calibration();
     app.configNs = rg_settings_get_string(NS_BOOT, SETTING_BOOT_NAME, app.configNs);
     app.bootArgs = rg_settings_get_string(NS_BOOT, SETTING_BOOT_ARGS, app.bootArgs);
     app.bootFlags = rg_settings_get_number(NS_BOOT, SETTING_BOOT_FLAGS, app.bootFlags);
@@ -880,6 +943,17 @@ void rg_system_tick(int busyTime)
     statistics.busyTime += busyTime;
     statistics.ticks++;
     // WDT_RELOAD(WDT_TIMEOUT);
+
+    if (battery_shutdown_requested)
+    {
+        battery_shutdown_requested = false;
+        if (app.handlers.saveState && app.romPath && app.romPath[0])
+        {
+            rg_gui_draw_message(_("Battery critically low, saving..."));
+            rg_emu_save_state(app.saveSlot);
+        }
+        rg_system_sleep();
+    }
 }
 
 IRAM_ATTR int64_t rg_system_timer(void)
@@ -1134,6 +1208,45 @@ bool rg_system_set_led_color(rg_color_t color)
 rg_color_t rg_system_get_led_color(void)
 {
     return ledColor;
+}
+
+rg_led_pattern_t rg_system_get_led_system_pattern(void)
+{
+    return ledSystemPattern;
+}
+
+void rg_system_set_led_system_pattern(rg_led_pattern_t pattern)
+{
+    if (pattern < 0 || pattern >= RG_LED_PATTERN_COUNT)
+        return;
+    ledSystemPattern = pattern;
+    rg_settings_set_number(NS_GLOBAL, SETTING_LED_SYSTEM_PATTERN, pattern);
+}
+
+rg_led_pattern_t rg_system_get_led_low_pattern(void)
+{
+    return ledLowPattern;
+}
+
+void rg_system_set_led_low_pattern(rg_led_pattern_t pattern)
+{
+    if (pattern < 0 || pattern == RG_LED_PATTERN_ACTIVITY || pattern >= RG_LED_PATTERN_COUNT)
+        return;
+    ledLowPattern = pattern;
+    rg_settings_set_number(NS_GLOBAL, SETTING_LED_LOW_PATTERN, pattern);
+}
+
+rg_low_battery_sound_t rg_system_get_low_battery_sound(void)
+{
+    return lowBatterySound;
+}
+
+void rg_system_set_low_battery_sound(rg_low_battery_sound_t mode)
+{
+    if (mode < 0 || mode >= RG_LOW_BATTERY_SOUND_COUNT)
+        return;
+    lowBatterySound = mode;
+    rg_settings_set_number(NS_GLOBAL, SETTING_LOW_BATTERY_SOUND, mode);
 }
 
 void rg_system_set_log_level(rg_log_level_t level)

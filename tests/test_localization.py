@@ -155,6 +155,7 @@ UI_LITERAL_FILE_ALLOWLIST = {
         ".bak", ".new", ".png", ".sav", ".sram", "/boot.json", "/clock.bin",
         "/crash.log", "/trace.txt", "BootArgs", "BootFlags", "BootName", "EST+5",
         "Ext DAC", "Indicators", "Out of task slots", "TZ", "Timezone", "\\e[0m",
+        "LedSystemPattern", "LedLowPattern", "LowBatterySound",
         "\\e[31m", "\\e[33m", "\\e[34m", "\\e[36m", "debug", "error",
         "esp_panic", "info", "main", "rg_sysmon", "rg_system_init() was already called.",
         "stderr.txt", "stdout.txt", "trace", "w", "warn",

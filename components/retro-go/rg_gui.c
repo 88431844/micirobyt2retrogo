@@ -1654,12 +1654,83 @@ static rg_gui_event_t speedup_update_cb(rg_gui_option_t *option, rg_gui_event_t 
 
 static rg_gui_event_t led_indicator_opt_cb(rg_gui_option_t *option, rg_gui_event_t event)
 {
+    static const rg_led_pattern_t low_patterns[] = {
+        RG_LED_PATTERN_OFF,
+        RG_LED_PATTERN_SOLID,
+        RG_LED_PATTERN_BREATHE,
+        RG_LED_PATTERN_SLOW,
+        RG_LED_PATTERN_FAST,
+        RG_LED_PATTERN_HEARTBEAT,
+    };
     if (event == RG_DIALOG_PREV || event == RG_DIALOG_NEXT)
     {
-        rg_system_set_indicator_mask(option->arg, !rg_system_get_indicator_mask(option->arg));
+        int direction = event == RG_DIALOG_NEXT ? 1 : -1;
+        if (option->arg == 0)
+        {
+            int pattern = rg_system_get_led_system_pattern() + direction;
+            if (pattern < 0) pattern = RG_LED_PATTERN_COUNT - 1;
+            if (pattern >= RG_LED_PATTERN_COUNT) pattern = 0;
+            rg_system_set_led_system_pattern(pattern);
+        }
+        else if (option->arg == 1)
+        {
+            size_t index = 0;
+            for (size_t i = 0; i < sizeof(low_patterns) / sizeof(low_patterns[0]); ++i)
+                if (low_patterns[i] == rg_system_get_led_low_pattern()) index = i;
+            index = (index + sizeof(low_patterns) / sizeof(low_patterns[0]) + direction) %
+                    (sizeof(low_patterns) / sizeof(low_patterns[0]));
+            rg_system_set_led_low_pattern(low_patterns[index]);
+        }
+        else if (option->arg == 2)
+        {
+            rg_system_set_indicator_mask(RG_INDICATOR_ACTIVITY_DISK,
+                                          !rg_system_get_indicator_mask(RG_INDICATOR_ACTIVITY_DISK));
+        }
+        else if (option->arg == 3)
+        {
+            int mode = rg_system_get_low_battery_sound() + direction;
+            if (mode < 0) mode = RG_LOW_BATTERY_SOUND_COUNT - 1;
+            if (mode >= RG_LOW_BATTERY_SOUND_COUNT) mode = 0;
+            rg_system_set_low_battery_sound(mode);
+        }
     }
-    rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE,
-                 rg_system_get_indicator_mask(option->arg) ? _("On") : _("Off"));
+    if (option->arg == 0)
+    {
+        switch (rg_system_get_led_system_pattern())
+        {
+        case RG_LED_PATTERN_OFF: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Off")); break;
+        case RG_LED_PATTERN_ACTIVITY: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Load pulse")); break;
+        case RG_LED_PATTERN_SOLID: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Solid")); break;
+        case RG_LED_PATTERN_BREATHE: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Breathe")); break;
+        case RG_LED_PATTERN_SLOW: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Slow blink")); break;
+        case RG_LED_PATTERN_FAST: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Fast blink")); break;
+        default: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Heartbeat")); break;
+        }
+    }
+    else if (option->arg == 1)
+    {
+        switch (rg_system_get_led_low_pattern())
+        {
+        case RG_LED_PATTERN_OFF: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Off")); break;
+        case RG_LED_PATTERN_SOLID: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Solid")); break;
+        case RG_LED_PATTERN_BREATHE: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Breathe")); break;
+        case RG_LED_PATTERN_FAST: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Fast blink")); break;
+        case RG_LED_PATTERN_HEARTBEAT: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Heartbeat")); break;
+        default: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Slow blink")); break;
+        }
+    }
+    else if (option->arg == 2)
+        rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE,
+                     rg_system_get_indicator_mask(RG_INDICATOR_ACTIVITY_DISK) ? _("On") : _("Off"));
+    else
+    {
+        switch (rg_system_get_low_battery_sound())
+        {
+        case RG_LOW_BATTERY_SOUND_OFF: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Off")); break;
+        case RG_LOW_BATTERY_SOUND_REPEAT: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Repeat")); break;
+        default: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Once")); break;
+        }
+    }
     return RG_DIALOG_VOID;
 }
 
@@ -1668,15 +1739,116 @@ static rg_gui_event_t led_indicator_cb(rg_gui_option_t *option, rg_gui_event_t e
     if (event == RG_DIALOG_ENTER)
     {
         const rg_gui_option_t options[] = {
-            {RG_INDICATOR_ACTIVITY_SYSTEM, _("System activity"), "-", RG_DIALOG_FLAG_NORMAL, &led_indicator_opt_cb},
-            {RG_INDICATOR_ACTIVITY_DISK, _("Disk activity"), "-", RG_DIALOG_FLAG_NORMAL, &led_indicator_opt_cb},
-            {RG_INDICATOR_POWER_LOW, _("Low battery"), "-", RG_DIALOG_FLAG_NORMAL, &led_indicator_opt_cb},
+            {0, _("System activity"), "-", RG_DIALOG_FLAG_NORMAL, &led_indicator_opt_cb},
+            {1, _("Low battery"), "-", RG_DIALOG_FLAG_NORMAL, &led_indicator_opt_cb},
+            {2, _("Disk activity"), "-", RG_DIALOG_FLAG_NORMAL, &led_indicator_opt_cb},
+            {3, _("Low battery sound"), "-", RG_DIALOG_FLAG_NORMAL, &led_indicator_opt_cb},
             RG_DIALOG_END,
         };
         rg_gui_dialog(option->label, options, 0);
     }
     return RG_DIALOG_VOID;
 }
+
+#if RG_BATTERY_CALIBRATION
+static void battery_format_voltage(char *dest, size_t size, float millivolts)
+{
+    if (millivolts > 0.f)
+        snprintf(dest, size, _("%.3fV"), millivolts / 1000.f);
+    else
+        rg_utf8_copy(dest, size, _("Not available"));
+}
+
+static rg_gui_event_t battery_voltage_cb(rg_gui_option_t *option, rg_gui_event_t event)
+{
+    (void)event;
+    rg_battery_t battery = rg_input_read_battery();
+    if (!battery.present)
+        rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Not available"));
+    else
+        battery_format_voltage(option->value, DIALOG_VALUE_BUFFER_SIZE, battery.volts * 1000.f);
+    return RG_DIALOG_VOID;
+}
+
+static rg_gui_event_t battery_calibration_value_cb(rg_gui_option_t *option, rg_gui_event_t event)
+{
+    (void)event;
+    rg_battery_calibration_t calibration = rg_input_get_battery_calibration();
+    float millivolts = option->arg == 0 ? calibration.empty_mv : calibration.full_mv;
+    battery_format_voltage(option->value, DIALOG_VALUE_BUFFER_SIZE, millivolts);
+    return RG_DIALOG_VOID;
+}
+
+static rg_gui_event_t battery_calibration_action_cb(rg_gui_option_t *option, rg_gui_event_t event)
+{
+    if (event != RG_DIALOG_ENTER)
+        return RG_DIALOG_VOID;
+
+    rg_battery_calibration_t calibration = rg_input_get_battery_calibration();
+    rg_battery_t battery = rg_input_read_battery();
+    float millivolts = battery.volts * 1000.f;
+
+    if (option->arg == 3)
+    {
+        if (rg_gui_confirm(_("Restore default calibration?"), NULL, false))
+        {
+            rg_input_reset_battery_calibration();
+            rg_settings_commit();
+            rg_gui_alert(_("Battery calibration"), _("Default calibration restored."));
+        }
+        return RG_DIALOG_REDRAW;
+    }
+
+    if (!battery.present || millivolts <= 0.f)
+    {
+        rg_gui_alert(_("Battery calibration"), _("Battery not available."));
+        return RG_DIALOG_REDRAW;
+    }
+
+    if (option->arg == 1)
+    {
+        if (millivolts >= calibration.full_mv)
+        {
+            rg_gui_alert(_("Battery calibration"), _("0% voltage must be below 100% voltage."));
+            return RG_DIALOG_REDRAW;
+        }
+        if (rg_gui_confirm(_("Set 0% voltage to current reading?"), NULL, false))
+            calibration.empty_mv = millivolts;
+    }
+    else if (option->arg == 2)
+    {
+        if (millivolts <= calibration.empty_mv)
+        {
+            rg_gui_alert(_("Battery calibration"), _("100% voltage must be above 0% voltage."));
+            return RG_DIALOG_REDRAW;
+        }
+        if (rg_gui_confirm(_("Set 100% voltage to current reading?"), NULL, false))
+            calibration.full_mv = millivolts;
+    }
+
+    if (rg_input_set_battery_calibration(calibration))
+        rg_settings_commit();
+    return RG_DIALOG_REDRAW;
+}
+
+static rg_gui_event_t battery_calibration_cb(rg_gui_option_t *option, rg_gui_event_t event)
+{
+    if (event == RG_DIALOG_ENTER)
+    {
+        const rg_gui_option_t options[] = {
+            {0, _("Current voltage"), "-", RG_DIALOG_FLAG_MESSAGE, &battery_voltage_cb},
+            {0, _("Calibrated 0% voltage"), "-", RG_DIALOG_FLAG_MESSAGE, &battery_calibration_value_cb},
+            {1, _("Set 0% voltage"), NULL, RG_DIALOG_FLAG_NORMAL, &battery_calibration_action_cb},
+            {1, _("Calibrated 100% voltage"), "-", RG_DIALOG_FLAG_MESSAGE, &battery_calibration_value_cb},
+            {2, _("Set 100% voltage"), NULL, RG_DIALOG_FLAG_NORMAL, &battery_calibration_action_cb},
+            {3, _("Restore default calibration"), NULL, RG_DIALOG_FLAG_NORMAL, &battery_calibration_action_cb},
+            RG_DIALOG_END,
+        };
+        rg_gui_dialog(option->label, options, 1);
+    }
+    return RG_DIALOG_VOID;
+}
+#endif
 
 static rg_gui_event_t show_clock_cb(rg_gui_option_t *option, rg_gui_event_t event)
 {
@@ -2096,6 +2268,9 @@ void rg_gui_options_menu(void)
         {0, _("Language"),      "-", RG_DIALOG_FLAG_NORMAL, &language_cb},
         #ifdef RG_GPIO_LED // Only show disk LED option if disk LED GPIO pin is defined
         {0, _("LED options"),   NULL, RG_DIALOG_FLAG_NORMAL, &led_indicator_cb},
+        #endif
+        #if RG_BATTERY_CALIBRATION
+        {0, _("Battery calibration"), NULL, RG_DIALOG_FLAG_NORMAL, &battery_calibration_cb},
         #endif
         #ifdef RG_ENABLE_NETWORKING
         {0, _("Wi-Fi options"), NULL, RG_DIALOG_FLAG_NORMAL, &wifi_cb},

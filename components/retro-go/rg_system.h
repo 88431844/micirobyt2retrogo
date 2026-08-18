@@ -11,6 +11,7 @@ extern "C" {
 #include <stdio.h>
 
 #include "config.h"
+#include "rg_led.h"
 
 #ifdef ESP_PLATFORM
 #include <esp_idf_version.h>
@@ -105,6 +106,14 @@ typedef enum
     // 30-31: Critical indicators
     RG_INDICATOR_CRITICAL = 30,
 } rg_indicator_t;
+
+typedef enum
+{
+    RG_LOW_BATTERY_SOUND_OFF = 0,
+    RG_LOW_BATTERY_SOUND_ONCE,
+    RG_LOW_BATTERY_SOUND_REPEAT,
+    RG_LOW_BATTERY_SOUND_COUNT,
+} rg_low_battery_sound_t;
 
 typedef enum
 {
@@ -225,6 +234,12 @@ void rg_system_set_indicator_mask(rg_indicator_t indicator, bool on);
 bool rg_system_get_indicator_mask(rg_indicator_t indicator);
 bool rg_system_set_led_color(rg_color_t color);
 rg_color_t rg_system_get_led_color(void);
+rg_led_pattern_t rg_system_get_led_system_pattern(void);
+void rg_system_set_led_system_pattern(rg_led_pattern_t pattern);
+rg_led_pattern_t rg_system_get_led_low_pattern(void);
+void rg_system_set_led_low_pattern(rg_led_pattern_t pattern);
+rg_low_battery_sound_t rg_system_get_low_battery_sound(void);
+void rg_system_set_low_battery_sound(rg_low_battery_sound_t mode);
 void rg_system_set_tick_rate(int tickRate);
 int rg_system_get_tick_rate(void);
 void rg_system_set_log_level(rg_log_level_t level);
