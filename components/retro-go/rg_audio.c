@@ -1,5 +1,6 @@
 #include "rg_system.h"
 #include "rg_audio.h"
+#include "rg_audio_tone.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -149,6 +150,27 @@ void rg_audio_submit(const rg_audio_frame_t *frames, size_t count)
 
     counters.totalSamples += count;
     counters.busyTime += rg_system_timer() - time_start;
+}
+
+bool rg_audio_play_tone(rg_audio_tone_t tone)
+{
+    if (!audio.driver || audio.muted)
+        return false;
+
+    size_t total = rg_audio_tone_length_samples(tone, audio.sampleRate);
+    if (!total)
+        return false;
+
+    rg_audio_frame_t frames[180];
+    for (size_t offset = 0; offset < total; offset += sizeof(frames) / sizeof(frames[0]))
+    {
+        size_t count = total - offset;
+        if (count > sizeof(frames) / sizeof(frames[0]))
+            count = sizeof(frames) / sizeof(frames[0]);
+        rg_audio_tone_render(tone, audio.sampleRate, offset, frames, count);
+        rg_audio_submit(frames, count);
+    }
+    return true;
 }
 
 rg_audio_counters_t rg_audio_get_counters(void)

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 typedef struct // __attribute__((packed))
@@ -10,6 +11,12 @@ typedef struct // __attribute__((packed))
 } rg_audio_frame_t;
 
 typedef rg_audio_frame_t rg_audio_sample_t;
+
+typedef enum
+{
+    RG_AUDIO_TONE_LOW = 0,
+    RG_AUDIO_TONE_CRITICAL,
+} rg_audio_tone_t;
 
 typedef struct
 {
@@ -39,6 +46,7 @@ typedef struct
 void rg_audio_init(int sample_rate);
 void rg_audio_deinit(void);
 void rg_audio_submit(const rg_audio_frame_t *frames, size_t count);
+bool rg_audio_play_tone(rg_audio_tone_t tone);
 rg_audio_counters_t rg_audio_get_counters(void);
 
 // const char **rg_audio_get_drivers(void);

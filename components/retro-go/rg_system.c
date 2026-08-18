@@ -94,6 +94,7 @@ static volatile bool battery_shutdown_requested = false;
 static bool battery_low_latched = false;
 static bool battery_critical_latched = false;
 static int64_t battery_critical_since = 0;
+static int64_t low_battery_sound_next = 0;
 #endif
 static uint32_t indicators;
 static rg_color_t ledColor = -1;
@@ -331,6 +332,8 @@ static void system_monitor_task(void *arg)
 #if RG_BATTERY_CALIBRATION
             if (battery.present)
             {
+                bool was_low = battery_low_latched;
+                bool was_critical = battery_critical_latched;
                 battery_low_latched = rg_battery_hysteresis(
                     battery_low_latched, battery.level,
                     RG_BATTERY_LOW_LEVEL, RG_BATTERY_LOW_EXIT_LEVEL);
@@ -350,12 +353,30 @@ static void system_monitor_task(void *arg)
                 {
                     battery_critical_since = 0;
                 }
+
+                int64_t now = rg_system_timer();
+                if (!was_low && battery_low_latched)
+                {
+                    if (lowBatterySound != RG_LOW_BATTERY_SOUND_OFF)
+                        rg_audio_play_tone(RG_AUDIO_TONE_LOW);
+                    low_battery_sound_next = now + 30 * 1000000;
+                }
+                else if (battery_low_latched && lowBatterySound == RG_LOW_BATTERY_SOUND_REPEAT &&
+                         low_battery_sound_next > 0 && now >= low_battery_sound_next)
+                {
+                    rg_audio_play_tone(RG_AUDIO_TONE_LOW);
+                    low_battery_sound_next = now + 30 * 1000000;
+                }
+                if (!was_critical && battery_critical_latched &&
+                    lowBatterySound != RG_LOW_BATTERY_SOUND_OFF)
+                    rg_audio_play_tone(RG_AUDIO_TONE_CRITICAL);
             }
             else
             {
                 battery_low_latched = false;
                 battery_critical_latched = false;
                 battery_critical_since = 0;
+                low_battery_sound_next = 0;
             }
             rg_system_set_indicator(RG_INDICATOR_POWER_LOW, battery_low_latched);
 #else
@@ -560,6 +581,7 @@ rg_app_t *rg_system_init(int sampleRate, const rg_handlers_t *handlers, void *_u
     battery_low_latched = false;
     battery_critical_latched = false;
     battery_critical_since = 0;
+    low_battery_sound_next = 0;
 #endif
 
     // Do this very early, may be needed to enable serial console

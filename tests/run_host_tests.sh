@@ -70,6 +70,17 @@ run_led()
     "$build_dir/test_led"
 }
 
+run_audio_tone()
+{
+    "${CC:-cc}" \
+        -std=c99 -Wall -Wextra -Werror -pedantic \
+        -I"$repo_root/components/retro-go" \
+        "$repo_root/tests/test_audio_tone.c" \
+        "$repo_root/components/retro-go/rg_audio_tone.c" \
+        -o "$build_dir/test_audio_tone"
+    "$build_dir/test_audio_tone"
+}
+
 case "${1:-all}" in
     utf8)
         run_utf8
@@ -86,15 +97,19 @@ case "${1:-all}" in
     led)
         run_led
         ;;
+    audio-tone)
+        run_audio_tone
+        ;;
     all)
         run_utf8
         run_cjk
         run_gui_defaults
         run_battery
         run_led
+        run_audio_tone
         ;;
     *)
-        echo "usage: $0 {utf8|cjk|gui-defaults|battery|led|all}" >&2
+        echo "usage: $0 {utf8|cjk|gui-defaults|battery|led|audio-tone|all}" >&2
         exit 2
         ;;
 esac
