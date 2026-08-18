@@ -48,6 +48,28 @@ run_gui_defaults()
     "$build_dir/test_gui_defaults"
 }
 
+run_battery()
+{
+    "${CC:-cc}" \
+        -std=c99 -Wall -Wextra -Werror -pedantic \
+        -I"$repo_root/components/retro-go" \
+        "$repo_root/tests/test_battery.c" \
+        "$repo_root/components/retro-go/rg_battery.c" \
+        -o "$build_dir/test_battery"
+    "$build_dir/test_battery"
+}
+
+run_led()
+{
+    "${CC:-cc}" \
+        -std=c99 -Wall -Wextra -Werror -pedantic \
+        -I"$repo_root/components/retro-go" \
+        "$repo_root/tests/test_led.c" \
+        "$repo_root/components/retro-go/rg_led.c" \
+        -o "$build_dir/test_led"
+    "$build_dir/test_led"
+}
+
 case "${1:-all}" in
     utf8)
         run_utf8
@@ -58,13 +80,21 @@ case "${1:-all}" in
     gui-defaults)
         run_gui_defaults
         ;;
+    battery)
+        run_battery
+        ;;
+    led)
+        run_led
+        ;;
     all)
         run_utf8
         run_cjk
         run_gui_defaults
+        run_battery
+        run_led
         ;;
     *)
-        echo "usage: $0 {utf8|cjk|gui-defaults|all}" >&2
+        echo "usage: $0 {utf8|cjk|gui-defaults|battery|led|all}" >&2
         exit 2
         ;;
 esac
