@@ -65,6 +65,7 @@ bool rg_storage_mkdir(const char *dir);
 rg_stat_t rg_storage_stat(const char *path);
 bool rg_storage_scandir(const char *path, rg_scandir_cb_t *callback, void *arg, uint32_t flags);
 int64_t rg_storage_get_free_space(const char *path);
+int64_t rg_storage_get_total_space(const char *path);
 
 enum
 {

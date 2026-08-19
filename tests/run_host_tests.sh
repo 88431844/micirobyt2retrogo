@@ -81,6 +81,17 @@ run_audio_tone()
     "$build_dir/test_audio_tone"
 }
 
+run_system_info()
+{
+    "${CC:-cc}" \
+        -std=c99 -Wall -Wextra -Werror -pedantic \
+        -I"$repo_root/components/retro-go" \
+        "$repo_root/tests/test_system_info.c" \
+        "$repo_root/components/retro-go/rg_system_info_format.c" \
+        -o "$build_dir/test_system_info"
+    "$build_dir/test_system_info"
+}
+
 case "${1:-all}" in
     utf8)
         run_utf8
@@ -100,6 +111,9 @@ case "${1:-all}" in
     audio-tone)
         run_audio_tone
         ;;
+    system-info)
+        run_system_info
+        ;;
     all)
         run_utf8
         run_cjk
@@ -107,6 +121,7 @@ case "${1:-all}" in
         run_battery
         run_led
         run_audio_tone
+        run_system_info
         ;;
     *)
         echo "usage: $0 {utf8|cjk|gui-defaults|battery|led|audio-tone|all}" >&2

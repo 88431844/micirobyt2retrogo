@@ -2010,4 +2010,40 @@ static const char *translations[][RG_LANG_MAX] =
         [RG_LANG_DE] = "Handheld",
         [RG_LANG_ZH_CN] = "掌机",
     },
+    {
+        [RG_LANG_EN] = "System information",
+        [RG_LANG_FR] = "Informations système",
+        [RG_LANG_DE] = "Systeminformationen",
+        [RG_LANG_ZH_CN] = "系统信息",
+    },
+    {
+        [RG_LANG_EN] = "Firmware version",
+        [RG_LANG_FR] = "Version du firmware",
+        [RG_LANG_DE] = "Firmware-Version",
+        [RG_LANG_ZH_CN] = "固件版本",
+    },
+    {
+        [RG_LANG_EN] = "Flash capacity",
+        [RG_LANG_FR] = "Capacité Flash",
+        [RG_LANG_DE] = "Flash-Kapazität",
+        [RG_LANG_ZH_CN] = "Flash 容量",
+    },
+    {
+        [RG_LANG_EN] = "PSRAM capacity",
+        [RG_LANG_FR] = "Capacité PSRAM",
+        [RG_LANG_DE] = "PSRAM-Kapazität",
+        [RG_LANG_ZH_CN] = "PSRAM 容量",
+    },
+    {
+        [RG_LANG_EN] = "SD card capacity",
+        [RG_LANG_FR] = "Capacité de la carte SD",
+        [RG_LANG_DE] = "SD-Kartenkapazität",
+        [RG_LANG_ZH_CN] = "SD 卡容量",
+    },
+    {
+        [RG_LANG_EN] = "SD card free",
+        [RG_LANG_FR] = "Espace libre SD",
+        [RG_LANG_DE] = "Freier SD-Kartenspeicher",
+        [RG_LANG_ZH_CN] = "SD 卡剩余空间",
+    },
 };

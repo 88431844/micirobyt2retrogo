@@ -409,20 +409,39 @@ bool rg_storage_scandir(const char *path, rg_scandir_cb_t *callback, void *arg, 
     return true;
 }
 
-int64_t rg_storage_get_free_space(const char *path)
+static bool rg_storage_get_fat_space(const char *path, int64_t *total, int64_t *free)
 {
     // Here we should translate the provided VFS path to the matching filesystem driver and drive
     // But we don't. Instead we just assume it's drive 0 of the fatfs driver. Yay laziness.
 #ifdef ESP_PLATFORM
     DWORD nclst;
     FATFS *fatfs;
-    if (f_getfree("0:", &nclst, &fatfs) == FR_OK)
+    (void)path;
+    if (rg_storage_ready() && f_getfree("0:", &nclst, &fatfs) == FR_OK)
     {
-        return (int64_t)nclst * fatfs->csize * fatfs->ssize;
+        if (total)
+            *total = (int64_t)(fatfs->n_fatent - 2) * fatfs->csize * fatfs->ssize;
+        if (free)
+            *free = (int64_t)nclst * fatfs->csize * fatfs->ssize;
+        return true;
     }
 #endif
 
-    return -1;
+    return false;
+}
+
+int64_t rg_storage_get_free_space(const char *path)
+{
+    int64_t free = -1;
+    rg_storage_get_fat_space(path, NULL, &free);
+    return free;
+}
+
+int64_t rg_storage_get_total_space(const char *path)
+{
+    int64_t total = -1;
+    rg_storage_get_fat_space(path, &total, NULL);
+    return total;
 }
 
 bool rg_storage_read_file(const char *path, void **data_out, size_t *data_len, uint32_t flags)

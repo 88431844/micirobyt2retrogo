@@ -12,6 +12,7 @@
 #include "bitmaps/image_hourglass.h"
 #include "fonts/cjk_font.h"
 #include "fonts/fonts.h"
+#include "rg_system_info.h"
 
 static struct
 {
@@ -2250,6 +2251,62 @@ static rg_gui_event_t app_options_cb(rg_gui_option_t *option, rg_gui_event_t eve
     return RG_DIALOG_VOID;
 }
 
+static void rg_gui_system_info_menu(void)
+{
+    char version[DIALOG_VALUE_BUFFER_SIZE];
+    char flash[DIALOG_VALUE_BUFFER_SIZE];
+    char psram[DIALOG_VALUE_BUFFER_SIZE];
+    char storage[DIALOG_VALUE_BUFFER_SIZE];
+    char storage_free[DIALOG_VALUE_BUFFER_SIZE];
+    rg_system_info_t info;
+    const rg_app_t *app = rg_system_get_app();
+
+    rg_system_info_get(&info);
+    rg_utf8_copy(version, sizeof(version), app->version ?: _("Not available"));
+
+    if (info.flash_size)
+        rg_system_info_format_size(flash, sizeof(flash), info.flash_size);
+    else
+        rg_utf8_copy(flash, sizeof(flash), _("Not available"));
+
+    if (info.psram_size)
+        rg_system_info_format_size(psram, sizeof(psram), info.psram_size);
+    else
+        rg_utf8_copy(psram, sizeof(psram), _("Not available"));
+
+    if (info.storage_total >= 0)
+        rg_system_info_format_size(storage, sizeof(storage), (uint64_t)info.storage_total);
+    else
+        rg_utf8_copy(storage, sizeof(storage), _("Not available"));
+
+    if (info.storage_free >= 0)
+        rg_system_info_format_size(storage_free, sizeof(storage_free), (uint64_t)info.storage_free);
+    else
+        rg_utf8_copy(storage_free, sizeof(storage_free), _("Not available"));
+
+    const rg_gui_option_t options[] = {
+        {0, _("Firmware version"), version, RG_DIALOG_FLAG_NORMAL, NULL},
+        {0, _("Flash capacity"), flash, RG_DIALOG_FLAG_NORMAL, NULL},
+        {0, _("PSRAM capacity"), psram, RG_DIALOG_FLAG_NORMAL, NULL},
+        {0, _("SD card capacity"), storage, RG_DIALOG_FLAG_NORMAL, NULL},
+        {0, _("SD card free"), storage_free, RG_DIALOG_FLAG_NORMAL, NULL},
+        RG_DIALOG_END,
+    };
+
+    rg_gui_dialog(_("System information"), options, 0);
+}
+
+static rg_gui_event_t system_info_cb(rg_gui_option_t *option, rg_gui_event_t event)
+{
+    if (event == RG_DIALOG_ENTER)
+    {
+        rg_gui_system_info_menu();
+        return RG_DIALOG_REDRAW;
+    }
+    (void)option;
+    return RG_DIALOG_VOID;
+}
+
 void rg_gui_options_menu(void)
 {
     rg_gui_option_t options[20] = {
@@ -2272,6 +2329,7 @@ void rg_gui_options_menu(void)
         #if RG_BATTERY_CALIBRATION
         {0, _("Battery calibration"), NULL, RG_DIALOG_FLAG_NORMAL, &battery_calibration_cb},
         #endif
+        {0, _("System information"), NULL, RG_DIALOG_FLAG_NORMAL, &system_info_cb},
         #ifdef RG_ENABLE_NETWORKING
         {0, _("Wi-Fi options"), NULL, RG_DIALOG_FLAG_NORMAL, &wifi_cb},
         #endif
