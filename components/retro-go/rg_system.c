@@ -100,8 +100,8 @@ static int64_t battery_critical_retry_at = 0;
 #endif
 static uint32_t indicators;
 static rg_color_t ledColor = -1;
-static rg_led_pattern_t ledSystemPattern = RG_LED_PATTERN_ACTIVITY;
-static rg_led_pattern_t ledLowPattern = RG_LED_PATTERN_SLOW;
+static rg_led_pattern_t ledSystemPattern = RG_LED_DEFAULT_SYSTEM_PATTERN;
+static rg_led_pattern_t ledLowPattern = RG_LED_DEFAULT_LOW_PATTERN;
 static rg_low_battery_sound_t lowBatterySound = RG_LOW_BATTERY_SOUND_ONCE;
 #if defined(RG_GPIO_LED) && defined(RG_GPIO_LED_PWM)
 static bool ledPwmReady = false;
@@ -632,13 +632,13 @@ rg_app_t *rg_system_init(int sampleRate, const rg_handlers_t *handlers, void *_u
 
     rg_settings_init(enterRecoveryMode || showCrashDialog);
     ledSystemPattern = (rg_led_pattern_t)rg_settings_get_number(
-        NS_GLOBAL, SETTING_LED_SYSTEM_PATTERN, RG_LED_PATTERN_ACTIVITY);
+        NS_GLOBAL, SETTING_LED_SYSTEM_PATTERN, RG_LED_DEFAULT_SYSTEM_PATTERN);
     if (ledSystemPattern < 0 || ledSystemPattern >= RG_LED_PATTERN_COUNT)
-        ledSystemPattern = RG_LED_PATTERN_ACTIVITY;
+        ledSystemPattern = RG_LED_DEFAULT_SYSTEM_PATTERN;
     ledLowPattern = (rg_led_pattern_t)rg_settings_get_number(
-        NS_GLOBAL, SETTING_LED_LOW_PATTERN, RG_LED_PATTERN_SLOW);
+        NS_GLOBAL, SETTING_LED_LOW_PATTERN, RG_LED_DEFAULT_LOW_PATTERN);
     if (ledLowPattern < 0 || ledLowPattern == RG_LED_PATTERN_ACTIVITY || ledLowPattern >= RG_LED_PATTERN_COUNT)
-        ledLowPattern = RG_LED_PATTERN_SLOW;
+        ledLowPattern = RG_LED_DEFAULT_LOW_PATTERN;
     lowBatterySound = (rg_low_battery_sound_t)rg_settings_get_number(
         NS_GLOBAL, SETTING_LOW_BATTERY_SOUND, RG_LOW_BATTERY_SOUND_ONCE);
     if (lowBatterySound < 0 || lowBatterySound >= RG_LOW_BATTERY_SOUND_COUNT)

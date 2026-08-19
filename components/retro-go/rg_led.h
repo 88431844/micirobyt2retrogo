@@ -15,4 +15,7 @@ typedef enum
     RG_LED_PATTERN_COUNT,
 } rg_led_pattern_t;
 
+#define RG_LED_DEFAULT_SYSTEM_PATTERN RG_LED_PATTERN_BREATHE_SLOW
+#define RG_LED_DEFAULT_LOW_PATTERN RG_LED_PATTERN_FAST
+
 uint8_t rg_led_pattern_brightness(rg_led_pattern_t pattern, int64_t elapsed_ms, float load_percent);

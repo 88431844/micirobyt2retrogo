@@ -11,6 +11,12 @@ static void test_fixed_patterns(void)
     assert(rg_led_pattern_brightness(RG_LED_PATTERN_SOLID, 500, 100.f) == 255);
 }
 
+static void test_default_indicator_patterns(void)
+{
+    assert(RG_LED_DEFAULT_SYSTEM_PATTERN == RG_LED_PATTERN_BREATHE_SLOW);
+    assert(RG_LED_DEFAULT_LOW_PATTERN == RG_LED_PATTERN_FAST);
+}
+
 static void test_breathe_pattern_has_low_and_high_points(void)
 {
     uint8_t low = rg_led_pattern_brightness(RG_LED_PATTERN_BREATHE, 0, 0.f);
@@ -57,6 +63,7 @@ static void test_activity_period_shortens_with_load(void)
 int main(void)
 {
     test_fixed_patterns();
+    test_default_indicator_patterns();
     test_breathe_pattern_has_low_and_high_points();
     test_slow_breathe_pattern_has_longer_cycle();
     test_flash_patterns_have_expected_boundaries();
