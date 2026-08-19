@@ -585,6 +585,12 @@ static const char *translations[][RG_LANG_MAX] =
         [RG_LANG_ZH_CN] = "呼吸灯",
     },
     {
+        [RG_LANG_EN] = "Slow breathe",
+        [RG_LANG_FR] = "Respiration lente",
+        [RG_LANG_DE] = "Langsames Atmen",
+        [RG_LANG_ZH_CN] = "慢速呼吸",
+    },
+    {
         [RG_LANG_EN] = "Slow blink",
         [RG_LANG_FR] = "Clignotement lent",
         [RG_LANG_DE] = "Langsames Blinken",

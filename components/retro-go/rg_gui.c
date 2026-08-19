@@ -1659,6 +1659,7 @@ static rg_gui_event_t led_indicator_opt_cb(rg_gui_option_t *option, rg_gui_event
         RG_LED_PATTERN_OFF,
         RG_LED_PATTERN_SOLID,
         RG_LED_PATTERN_BREATHE,
+        RG_LED_PATTERN_BREATHE_SLOW,
         RG_LED_PATTERN_SLOW,
         RG_LED_PATTERN_FAST,
         RG_LED_PATTERN_HEARTBEAT,
@@ -1703,6 +1704,7 @@ static rg_gui_event_t led_indicator_opt_cb(rg_gui_option_t *option, rg_gui_event
         case RG_LED_PATTERN_ACTIVITY: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Load pulse")); break;
         case RG_LED_PATTERN_SOLID: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Solid")); break;
         case RG_LED_PATTERN_BREATHE: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Breathe")); break;
+        case RG_LED_PATTERN_BREATHE_SLOW: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Slow breathe")); break;
         case RG_LED_PATTERN_SLOW: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Slow blink")); break;
         case RG_LED_PATTERN_FAST: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Fast blink")); break;
         default: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Heartbeat")); break;
@@ -1715,6 +1717,7 @@ static rg_gui_event_t led_indicator_opt_cb(rg_gui_option_t *option, rg_gui_event
         case RG_LED_PATTERN_OFF: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Off")); break;
         case RG_LED_PATTERN_SOLID: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Solid")); break;
         case RG_LED_PATTERN_BREATHE: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Breathe")); break;
+        case RG_LED_PATTERN_BREATHE_SLOW: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Slow breathe")); break;
         case RG_LED_PATTERN_FAST: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Fast blink")); break;
         case RG_LED_PATTERN_HEARTBEAT: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Heartbeat")); break;
         default: rg_utf8_copy(option->value, DIALOG_VALUE_BUFFER_SIZE, _("Slow blink")); break;

@@ -11,6 +11,7 @@ typedef enum
     RG_LED_PATTERN_SLOW,
     RG_LED_PATTERN_FAST,
     RG_LED_PATTERN_HEARTBEAT,
+    RG_LED_PATTERN_BREATHE_SLOW,
     RG_LED_PATTERN_COUNT,
 } rg_led_pattern_t;
 

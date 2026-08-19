@@ -38,6 +38,13 @@ uint8_t rg_led_pattern_brightness(rg_led_pattern_t pattern, int64_t elapsed_ms, 
         int64_t phase = elapsed_ms % 800;
         return (phase < 150 || (phase >= 350 && phase < 500)) ? 255 : 0;
     }
+    case RG_LED_PATTERN_BREATHE_SLOW:
+    {
+        int64_t phase = elapsed_ms % 4000;
+        if (phase <= 2000)
+            return (uint8_t)(phase * 255 / 2000);
+        return (uint8_t)((4000 - phase) * 255 / 2000);
+    }
     case RG_LED_PATTERN_ACTIVITY:
     default:
     {
